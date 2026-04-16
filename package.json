@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.89.0",
+    "bcryptjs": "^3.0.3",
     "@auth/core": "^0.34.3",
     "@supabase/supabase-js": "^2.103.2",
     "next": "16.2.4",
@@ -19,6 +20,7 @@
     "twilio": "^5.13.1"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
