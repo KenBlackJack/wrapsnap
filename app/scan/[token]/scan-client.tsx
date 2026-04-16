@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -196,10 +197,22 @@ const INSTRUCTIONS = [
   },
 ];
 
-function Instructions({ onReady }: { onReady: () => void }) {
+function Instructions({ onReady, onBack }: { onReady: () => void; onBack?: () => void }) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col p-6">
       <div className="w-full max-w-sm mx-auto flex flex-col flex-1">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-1.5 self-start mb-4 text-sm font-medium text-gray-500 hover:text-gray-700 transition"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+            </svg>
+            Back to session
+          </button>
+        )}
         <Logo />
         <h1 className="text-2xl font-semibold text-gray-900 text-center mb-1">
           Before you start
@@ -501,8 +514,9 @@ function Complete() {
 
 // ─── Root client component ────────────────────────────────────────────────────
 
-export default function ScanClient({ token }: { token: string }) {
-  const [appState, setAppState] = useState<AppState>("pin-entry");
+export default function ScanClient({ token, isAE }: { token: string; isAE: boolean }) {
+  const router = useRouter();
+  const [appState, setAppState] = useState<AppState>(isAE ? "instructions" : "pin-entry");
   const [capturedPhotos, setCapturedPhotos] = useState<CapturedPhoto[]>([]);
 
   if (appState === "pin-entry") {
@@ -510,7 +524,12 @@ export default function ScanClient({ token }: { token: string }) {
   }
 
   if (appState === "instructions") {
-    return <Instructions onReady={() => setAppState("capture")} />;
+    return (
+      <Instructions
+        onReady={() => setAppState("capture")}
+        onBack={isAE ? () => router.back() : undefined}
+      />
+    );
   }
 
   if (appState === "capture") {
