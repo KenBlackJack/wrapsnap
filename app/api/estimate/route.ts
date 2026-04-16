@@ -4,6 +4,16 @@ import Anthropic from "@anthropic-ai/sdk";
 
 export const runtime = "nodejs";
 
+// Claude only accepts these image types
+const CLAUDE_MEDIA_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+
+function toClaudeMediaType(raw: string): "image/jpeg" | "image/png" | "image/gif" | "image/webp" {
+  const t = raw.toLowerCase().split(";")[0].trim();
+  if (CLAUDE_MEDIA_TYPES.has(t)) return t as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+  // HEIC, HEIF, and unknown formats — treat as JPEG (closest Claude accepts)
+  return "image/jpeg";
+}
+
 const ESTIMATION_PROMPT = `\
 You are an expert vinyl wrap estimator for Advertising Vehicles, a fleet graphics company.
 
@@ -50,7 +60,7 @@ Return ONLY a valid JSON object — no markdown fences, no explanation, just the
   "sqft_low": <number>,
   "sqft_high": <number>,
   "paint_color": "<description of vehicle base paint color>",
-  "paint_warnings": ["<string>" ],
+  "paint_warnings": ["<string>"],
   "confidence": "high | medium | low",
   "confidence_note": "<explanation of confidence level and any caveats>"
 }`;
@@ -68,9 +78,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "token is required" }, { status: 400 });
   }
 
+  console.log("Estimate: starting for token", token.trim());
+
   const supabase = getSupabaseClient();
 
-  // Verify session is active
+  // Verify session
   const { data: session, error: sessionError } = await supabase
     .from("sessions")
     .select("id, status, expires_at")
@@ -78,14 +90,19 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (sessionError || !session) {
+    console.error("Estimate: session lookup failed", { token, error: sessionError?.message });
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
   if (session.status === "expired" || session.status === "complete") {
+    console.error("Estimate: session closed", { token, status: session.status });
     return NextResponse.json({ error: `Session is ${session.status}` }, { status: 403 });
   }
   if (new Date(session.expires_at) < new Date()) {
+    console.error("Estimate: session past expiry", { token, expires_at: session.expires_at });
     return NextResponse.json({ error: "Session has expired" }, { status: 410 });
   }
+
+  console.log("Estimate: session ok", { sessionId: session.id, status: session.status });
 
   // Fetch upload records
   const { data: uploads, error: uploadsError } = await supabase
@@ -94,45 +111,61 @@ export async function POST(req: NextRequest) {
     .eq("session_id", session.id)
     .order("uploaded_at", { ascending: true });
 
-  if (uploadsError || !uploads?.length) {
+  if (uploadsError) {
+    console.error("Estimate: uploads query failed", { sessionId: session.id, error: uploadsError.message });
+    return NextResponse.json({ error: "Failed to fetch uploads", detail: uploadsError.message }, { status: 500 });
+  }
+  if (!uploads?.length) {
+    console.error("Estimate: no uploads found", { sessionId: session.id });
     return NextResponse.json({ error: "No uploads found for this session" }, { status: 422 });
   }
+
+  console.log("Estimate: uploads found", { count: uploads.length, panels: uploads.map((u) => u.panel) });
 
   // Download each image from Supabase Storage and encode as base64
   const imageBlocks: Anthropic.ImageBlockParam[] = [];
   const panelLabels: string[] = [];
 
   for (const upload of uploads) {
+    console.log("Estimate: downloading", upload.storage_path);
+
     const { data: fileData, error: downloadError } = await supabase.storage
       .from("vehicle-photos")
       .download(upload.storage_path);
 
     if (downloadError || !fileData) {
-      console.error(`Failed to download ${upload.storage_path}:`, downloadError);
+      console.error("Estimate: download failed", {
+        path: upload.storage_path,
+        error: downloadError?.message,
+        hasData: !!fileData,
+      });
       return NextResponse.json(
-        { error: `Failed to retrieve image for panel: ${upload.panel}` },
+        { error: `Failed to download image for panel: ${upload.panel}`, detail: downloadError?.message },
         { status: 500 },
       );
     }
 
     const arrayBuffer = await fileData.arrayBuffer();
+    const bytes = arrayBuffer.byteLength;
+    const blobType = fileData.type || "image/jpeg";
+    const mediaType = toClaudeMediaType(blobType);
     const base64 = Buffer.from(arrayBuffer).toString("base64");
-    panelLabels.push(upload.panel);
 
+    console.log("Estimate: image ready", { panel: upload.panel, bytes, blobType, mediaType });
+
+    panelLabels.push(upload.panel);
     imageBlocks.push({
       type: "image",
-      source: {
-        type: "base64",
-        media_type: "image/jpeg",
-        data: base64,
-      },
+      source: { type: "base64", media_type: mediaType, data: base64 },
     });
   }
 
-  // Build panel context so Claude knows which image is which
+  // Build panel context label for Claude
   const panelContext = panelLabels
     .map((p, i) => `Image ${i + 1}: ${p.replace(/_/g, " ")}`)
     .join("\n");
+
+  console.log("Estimate: calling Claude", { model: "claude-sonnet-4-20250514", imageCount: imageBlocks.length });
 
   // Call Claude
   const anthropic = new Anthropic();
@@ -155,22 +188,41 @@ export async function POST(req: NextRequest) {
       ],
     });
 
+    console.log("Estimate: Claude responded", {
+      stop_reason: message.stop_reason,
+      content_blocks: message.content.length,
+      usage: message.usage,
+    });
+
     const textBlock = message.content.find((b) => b.type === "text");
     rawResponse = textBlock?.type === "text" ? textBlock.text : "";
+
+    if (!rawResponse) {
+      console.error("Estimate: Claude returned no text block", { content: message.content });
+      return NextResponse.json({ error: "Claude returned an empty response" }, { status: 502 });
+    }
+
+    console.log("Estimate: raw response (first 500 chars)", rawResponse.slice(0, 500));
   } catch (aiError) {
-    console.error("Claude API error:", aiError);
-    return NextResponse.json({ error: "AI estimation failed" }, { status: 502 });
+    const msg = aiError instanceof Error ? aiError.message : String(aiError);
+    const status = (aiError as Record<string, unknown>)?.status;
+    console.error("Estimate: Claude API error", { message: msg, status, aiError });
+    return NextResponse.json({ error: "AI estimation failed", detail: msg }, { status: 502 });
   }
 
-  // Parse Claude's JSON response
+  // Parse Claude's JSON — strip any markdown fences Claude may have added
   let estimate: Record<string, unknown>;
   try {
-    // Strip accidental markdown fences if Claude added them
-    const cleaned = rawResponse.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+    const cleaned = rawResponse
+      .replace(/^```(?:json)?\s*/im, "")
+      .replace(/\s*```\s*$/im, "")
+      .trim();
     estimate = JSON.parse(cleaned);
+    console.log("Estimate: JSON parsed ok", { vehicle_type: estimate.vehicle_type, total_sqft: estimate.total_sqft });
   } catch (parseError) {
-    console.error("Failed to parse Claude response:", rawResponse, parseError);
-    return NextResponse.json({ error: "Failed to parse AI response" }, { status: 502 });
+    const msg = parseError instanceof Error ? parseError.message : String(parseError);
+    console.error("Estimate: JSON parse failed", { message: msg, rawResponse });
+    return NextResponse.json({ error: "Failed to parse AI response", detail: msg, rawResponse }, { status: 502 });
   }
 
   // Insert into estimates table
@@ -178,31 +230,36 @@ export async function POST(req: NextRequest) {
     .from("estimates")
     .insert({
       session_id:      session.id,
-      vehicle_type:    estimate.vehicle_type as string ?? null,
+      vehicle_type:    (estimate.vehicle_type as string) ?? null,
       panels:          estimate.panels ?? null,
-      total_sqft:      estimate.total_sqft as number ?? null,
-      sqft_low:        estimate.sqft_low as number ?? null,
-      sqft_high:       estimate.sqft_high as number ?? null,
-      confidence:      estimate.confidence as string ?? null,
-      confidence_note: estimate.confidence_note as string ?? null,
+      total_sqft:      (estimate.total_sqft as number) ?? null,
+      sqft_low:        (estimate.sqft_low as number) ?? null,
+      sqft_high:       (estimate.sqft_high as number) ?? null,
+      confidence:      (estimate.confidence as string) ?? null,
+      confidence_note: (estimate.confidence_note as string) ?? null,
       raw_response:    rawResponse,
     })
     .select("id")
     .single();
 
   if (estimateError) {
-    console.error("Estimate insert error:", estimateError);
-    // Don't fail the request — return the estimate even if DB write fails
+    console.error("Estimate: DB insert error", { message: estimateError.message, estimateError });
+    // Non-fatal — return the estimate even if DB write fails
+  } else {
+    console.log("Estimate: saved to DB", { estimateId: estimateRow?.id });
   }
 
   // Mark session complete
-  await supabase
+  const { error: updateError } = await supabase
     .from("sessions")
     .update({ status: "complete" })
     .eq("id", session.id);
 
-  return NextResponse.json({
-    estimateId: estimateRow?.id ?? null,
-    ...estimate,
-  });
+  if (updateError) {
+    console.error("Estimate: failed to mark session complete", { message: updateError.message });
+  } else {
+    console.log("Estimate: session marked complete", { sessionId: session.id });
+  }
+
+  return NextResponse.json({ estimateId: estimateRow?.id ?? null, ...estimate });
 }
