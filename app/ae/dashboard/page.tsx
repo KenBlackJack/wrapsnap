@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getSupabaseClient } from "@/lib/supabase";
 import SignOutButton from "./sign-out-button";
+import ScanButton from "./scan-button";
 
 export const dynamic = "force-dynamic";
 
@@ -94,22 +95,30 @@ export default async function DashboardPage() {
 
       {/* Page body */}
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Sessions</h1>
-            <p className="mt-0.5 text-sm text-gray-500">Manage client estimation sessions</p>
-          </div>
+
+        {/* Action cards */}
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <ScanButton aeName={userName} />
+
           <Link
             href="/ae/sessions/new"
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2"
-            style={{ backgroundColor: "#007BBA" }}
+            className="flex flex-col items-start gap-3 rounded-xl p-5 text-left transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2"
+            style={{ backgroundColor: "#28A745" }}
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            New Session
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
+              <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-semibold text-white">Invite a Client</p>
+              <p className="mt-0.5 text-sm text-white/70">Send a scan link — client does it themselves</p>
+            </div>
           </Link>
         </div>
+
+        {/* Recent sessions */}
+        <h2 className="mb-4 text-base font-semibold text-gray-900">Recent Sessions</h2>
 
         {sessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white py-20 text-center">
