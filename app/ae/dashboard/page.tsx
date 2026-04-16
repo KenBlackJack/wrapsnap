@@ -5,6 +5,50 @@ import SignOutButton from "./sign-out-button";
 
 export const dynamic = "force-dynamic";
 
+type SessionStatus = "pending" | "active" | "complete" | "expired";
+
+interface WrapSession {
+  id: string;
+  client_name: string;
+  client_phone: string;
+  status: SessionStatus;
+  created_at: string;
+}
+
+const STATUS_STYLES: Record<SessionStatus, string> = {
+  pending:  "bg-gray-100 text-gray-600",
+  active:   "bg-blue-100 text-blue-700",
+  complete: "bg-green-100 text-green-700",
+  expired:  "bg-red-100 text-red-700",
+};
+
+function StatusPill({ status }: { status: SessionStatus }) {
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[status]}`}>
+      {status}
+    </span>
+  );
+}
+
+function formatPhone(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  return phone;
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+// Placeholder until Supabase is wired up
+const sessions: WrapSession[] = [];
+
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
@@ -12,22 +56,93 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
+  const userName = session.user.name ?? session.user.email ?? "AE";
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-100 p-6">
-      <section className="w-full max-w-xl rounded-lg bg-white p-8 shadow-md">
-        <h1 className="mb-2 text-2xl font-semibold text-gray-900">
-          Welcome, {session.user.name ?? "User"}!
-        </h1>
-        <p className="mb-1 text-sm text-gray-600">
-          <span className="font-medium text-gray-800">Name:</span>{" "}
-          {session.user.name ?? "Not available"}
-        </p>
-        <p className="mb-6 text-sm text-gray-600">
-          <span className="font-medium text-gray-800">Email:</span>{" "}
-          {session.user.email ?? "Not available"}
-        </p>
-        <SignOutButton />
-      </section>
-    </main>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center gap-3">
+              {/* Logo mark */}
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ backgroundColor: "#007BBA" }}>
+                <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.25V18a2.25 2.25 0 002.25 2.25h13.5A2.25 2.25 0 0021 18V8.25m-18 0V6a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 6v2.25m-18 0h18M12 12.75h.008v.008H12v-.008z" />
+                </svg>
+              </div>
+              <div className="leading-tight">
+                <p className="text-lg font-bold tracking-tight text-gray-900">WrapSnap</p>
+                <p className="text-[11px] font-medium" style={{ color: "#007BBA" }}>by Advertising Vehicles</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="hidden text-sm text-gray-600 sm:block">
+                {userName}
+              </span>
+              <SignOutButton />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Page body */}
+      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Page title + action */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Sessions</h1>
+            <p className="mt-0.5 text-sm text-gray-500">Manage client estimation sessions</p>
+          </div>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2"
+            style={{ backgroundColor: "#007BBA", "--tw-ring-color": "#007BBA" } as React.CSSProperties}
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            New Session
+          </button>
+        </div>
+
+        {/* Session list */}
+        {sessions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white py-20 text-center">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
+              <svg className="h-7 w-7 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-gray-900">No sessions yet</p>
+            <p className="mt-1 text-sm text-gray-500">Create your first session to get started.</p>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {sessions.map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate font-medium text-gray-900">{s.client_name}</p>
+                    <StatusPill status={s.status} />
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-gray-500">
+                    <span>{formatPhone(s.client_phone)}</span>
+                    <span>{formatDate(s.created_at)}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-1"
+                >
+                  View
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </main>
+    </div>
   );
 }
