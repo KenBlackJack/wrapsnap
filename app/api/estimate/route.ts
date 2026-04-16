@@ -165,14 +165,19 @@ export async function POST(req: NextRequest) {
     .map((p, i) => `Image ${i + 1}: ${p.replace(/_/g, " ")}`)
     .join("\n");
 
-  console.log("Estimate: calling Claude", { model: "claude-sonnet-4-20250514", imageCount: imageBlocks.length });
+  const apiKey = process.env.ANTHROPIC_API_KEY ?? "";
+  console.log("Estimate: calling Claude", {
+    model: "claude-sonnet-4-6",
+    imageCount: imageBlocks.length,
+    apiKeyPrefix: apiKey ? apiKey.slice(0, 10) + "…" : "MISSING",
+  });
 
   // Call Claude
   const anthropic = new Anthropic();
   let rawResponse: string;
   try {
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 4096,
       messages: [
         {
@@ -204,10 +209,13 @@ export async function POST(req: NextRequest) {
 
     console.log("Estimate: raw response (first 500 chars)", rawResponse.slice(0, 500));
   } catch (aiError) {
-    const msg = aiError instanceof Error ? aiError.message : String(aiError);
-    const status = (aiError as Record<string, unknown>)?.status;
-    console.error("Estimate: Claude API error", { message: msg, status, aiError });
-    return NextResponse.json({ error: "AI estimation failed", detail: msg }, { status: 502 });
+    const e = aiError as Record<string, unknown>;
+    const msg  = aiError instanceof Error ? aiError.message : String(aiError);
+    const status  = e?.status;
+    const errBody = e?.error;        // Anthropic SDK wraps the API error body here
+    const errType = e?.type;
+    console.error("Estimate: Claude API error", { message: msg, status, errType, errBody, full: String(aiError) });
+    return NextResponse.json({ error: "AI estimation failed", detail: msg, status, errBody }, { status: 502 });
   }
 
   // Parse Claude's JSON — strip any markdown fences Claude may have added
