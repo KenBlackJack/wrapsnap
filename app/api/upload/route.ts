@@ -45,9 +45,9 @@ export async function POST(req: NextRequest) {
     console.error("Upload: session lookup failed", { token, sessionError });
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
-  if (session.status !== "active") {
-    console.error("Upload: session not active", { token, status: session.status });
-    return NextResponse.json({ error: "Session is not active" }, { status: 403 });
+  if (session.status === "expired" || session.status === "complete") {
+    console.error("Upload: session closed", { token, status: session.status });
+    return NextResponse.json({ error: `Session is ${session.status}` }, { status: 403 });
   }
   if (new Date(session.expires_at) < new Date()) {
     console.error("Upload: session expired", { token, expires_at: session.expires_at });
