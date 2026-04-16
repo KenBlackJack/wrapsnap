@@ -69,19 +69,30 @@ export default async function SessionDetailPage({
   if (error || !session || session.created_by !== userEmail) notFound();
 
   // Fetch uploads
-  const { data: uploads } = await supabase
+  const { data: uploads, error: uploadsError } = await supabase
     .from("uploads")
     .select("panel, storage_path")
     .eq("session_id", id);
 
+  if (uploadsError) {
+    console.error("Session detail: uploads query error", { id, message: uploadsError.message, uploadsError });
+  }
+
   // Build signed URLs (1-hour expiry) for uploaded panels
   const uploadsBySlug: Record<string, string> = {};
   for (const upload of uploads ?? []) {
-    const { data: signed } = await supabase.storage
+    const { data: signed, error: signedError } = await supabase.storage
       .from("vehicle-photos")
       .createSignedUrl(upload.storage_path, 3600);
-    if (signed?.signedUrl) uploadsBySlug[upload.panel] = signed.signedUrl;
+    if (signedError) {
+      console.error("Session detail: signed URL error", { storage_path: upload.storage_path, message: signedError.message, signedError });
+    }
+    if (signed?.signedUrl) {
+      uploadsBySlug[upload.panel] = signed.signedUrl;
+    }
   }
+
+  console.log("Session detail: uploads found", { id, panels: Object.keys(uploadsBySlug) });
 
   // Fetch most recent estimate
   const { data: estimates } = await supabase

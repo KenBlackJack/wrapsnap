@@ -288,6 +288,7 @@ function PhotoCapture({
   const [photos, setPhotos] = useState<CapturedPhoto[]>([]);
   const [preview, setPreview] = useState<{ file: File; url: string } | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -298,20 +299,32 @@ function PhotoCapture({
     if (!file) return;
     if (preview) URL.revokeObjectURL(preview.url);
     setPreview({ file, url: URL.createObjectURL(file) });
+    setUploadError(null);
   }
 
   function handleRetake() {
     if (preview) URL.revokeObjectURL(preview.url);
     setPreview(null);
+    setUploadError(null);
     setFileInputKey((k) => k + 1);
   }
 
   async function handleLooksGood() {
     if (!preview) return;
     setUploading(true);
+    setUploadError(null);
     try {
-      console.log("POST /api/upload", { token, panel, file: preview.file.name });
-      await new Promise((r) => setTimeout(r, 700));
+      const formData = new FormData();
+      formData.append("token", token);
+      formData.append("panel", panel);
+      formData.append("file", preview.file);
+
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? `Upload failed (${res.status})`);
+      }
+
       const newPhoto: CapturedPhoto = { panel, file: preview.file, preview: preview.url };
       const updated = [...photos, newPhoto];
       setPhotos(updated);
@@ -322,6 +335,9 @@ function PhotoCapture({
       } else {
         onComplete(updated);
       }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Upload failed. Please try again.";
+      setUploadError(msg);
     } finally {
       setUploading(false);
     }
@@ -365,6 +381,11 @@ function PhotoCapture({
                   className="w-full h-full object-cover"
                 />
               </div>
+              {uploadError && (
+                <p className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                  {uploadError}
+                </p>
+              )}
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -431,14 +452,25 @@ function Submission({
   onComplete: () => void;
 }) {
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   async function handleSubmit() {
     setSubmitting(true);
+    setSubmitError(null);
     try {
-      console.log("POST /api/estimate", { token, panels: photos.map((p) => p.panel) });
-      await new Promise((r) => setTimeout(r, 2000));
+      const res = await fetch("/api/estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? `Estimate failed (${res.status})`);
+      }
       onComplete();
-    } finally {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      setSubmitError(msg);
       setSubmitting(false);
     }
   }
@@ -485,6 +517,11 @@ function Submission({
           ))}
         </div>
 
+        {submitError && (
+          <p className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 mb-4">
+            {submitError}
+          </p>
+        )}
         <PrimaryButton onClick={handleSubmit}>Send for estimate</PrimaryButton>
       </div>
     </div>
