@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getSupabaseClient } from "@/lib/supabase";
 import SignOutButton from "./sign-out-button";
 
 export const dynamic = "force-dynamic";
@@ -46,9 +48,6 @@ function formatDate(iso: string) {
   });
 }
 
-// Placeholder until Supabase is wired up
-const sessions: WrapSession[] = [];
-
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
@@ -56,7 +55,16 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const userName = session.user.name ?? session.user.email ?? "AE";
+  const userEmail = session.user.email ?? "";
+  const userName = session.user.name ?? (userEmail || "AE");
+
+  const { data: wrapSessions } = await getSupabaseClient()
+    .from("sessions")
+    .select("id, client_name, client_phone, status, created_at")
+    .eq("created_by", userEmail)
+    .order("created_at", { ascending: false });
+
+  const sessions: WrapSession[] = wrapSessions ?? [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -65,7 +73,6 @@ export default async function DashboardPage() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Logo mark */}
               <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ backgroundColor: "#007BBA" }}>
                 <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.25V18a2.25 2.25 0 002.25 2.25h13.5A2.25 2.25 0 0021 18V8.25m-18 0V6a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 6v2.25m-18 0h18M12 12.75h.008v.008H12v-.008z" />
@@ -78,9 +85,7 @@ export default async function DashboardPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="hidden text-sm text-gray-600 sm:block">
-                {userName}
-              </span>
+              <span className="hidden text-sm text-gray-600 sm:block">{userName}</span>
               <SignOutButton />
             </div>
           </div>
@@ -89,25 +94,23 @@ export default async function DashboardPage() {
 
       {/* Page body */}
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Page title + action */}
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Sessions</h1>
             <p className="mt-0.5 text-sm text-gray-500">Manage client estimation sessions</p>
           </div>
-          <button
-            type="button"
+          <Link
+            href="/ae/sessions/new"
             className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2"
-            style={{ backgroundColor: "#007BBA", "--tw-ring-color": "#007BBA" } as React.CSSProperties}
+            style={{ backgroundColor: "#007BBA" }}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
             New Session
-          </button>
+          </Link>
         </div>
 
-        {/* Session list */}
         {sessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white py-20 text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
