@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (
@@ -14,11 +15,12 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith("/ae/")) {
-    const hasSessionCookie =
-      Boolean(request.cookies.get("next-auth.session-token")?.value) ||
-      Boolean(request.cookies.get("__Secure-next-auth.session-token")?.value);
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
 
-    if (!hasSessionCookie) {
+    if (!token) {
       const loginUrl = new URL("/login", request.url);
       return NextResponse.redirect(loginUrl);
     }
