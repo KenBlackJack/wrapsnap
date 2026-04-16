@@ -80,8 +80,8 @@ export async function POST(req: NextRequest) {
   if (sessionError || !session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
-  if (session.status !== "active") {
-    return NextResponse.json({ error: "Session is not active" }, { status: 403 });
+  if (session.status === "expired" || session.status === "complete") {
+    return NextResponse.json({ error: `Session is ${session.status}` }, { status: 403 });
   }
   if (new Date(session.expires_at) < new Date()) {
     return NextResponse.json({ error: "Session has expired" }, { status: 410 });
