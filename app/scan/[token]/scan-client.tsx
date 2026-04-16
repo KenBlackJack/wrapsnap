@@ -109,12 +109,26 @@ function PinEntry({
     setLoading(true);
     setError(null);
     try {
-      console.log("POST /api/otp/verify", { token, pin });
-      // Mock: any 6-digit PIN succeeds for now
-      await new Promise((r) => setTimeout(r, 600));
+      const res = await fetch("/api/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, pin }),
+      });
+      if (res.status === 401) {
+        setError("Incorrect PIN. Please try again.");
+        return;
+      }
+      if (res.status === 410) {
+        setError("This session has expired. Please contact your representative.");
+        return;
+      }
+      if (!res.ok) {
+        setError("Incorrect PIN or expired session.");
+        return;
+      }
       onSuccess();
     } catch {
-      setError("Incorrect PIN or expired session.");
+      setError("Network error. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }
