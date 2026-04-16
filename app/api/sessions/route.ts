@@ -92,6 +92,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
   }
 
+  // Normalize phone to E.164 (+1XXXXXXXXXX)
+  function toE164(phone: string): string {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.startsWith("1") && digits.length === 11) return `+${digits}`;
+    if (digits.length === 10) return `+1${digits}`;
+    return `+${digits}`; // pass through international numbers as-is
+  }
+  const toPhone = toE164(client_phone.trim());
+
   // Send SMS via Twilio
   const sessionUrl = `https://wrapsnap.advertisingvehicles.com/scan/${token}`;
   const smsBody =
@@ -107,13 +116,21 @@ export async function POST(req: NextRequest) {
     await twilioClient.messages.create({
       body: smsBody,
       from: process.env.TWILIO_PHONE_NUMBER,
-      to: client_phone.trim(),
+      to: toPhone,
     });
   } catch (smsError) {
-    console.error("Twilio SMS error:", smsError);
-    // Session was created — don't roll back. Caller can retry SMS separately.
+    const errMsg = smsError instanceof Error ? smsError.message : String(smsError);
+    const errCode = (smsError as Record<string, unknown>)?.code ?? null;
+    const errStatus = (smsError as Record<string, unknown>)?.status ?? null;
+    console.error("Twilio SMS error:", { errMsg, errCode, errStatus, toPhone });
+    // Session was created — don't roll back. Return full Twilio error so caller can diagnose.
     return NextResponse.json(
-      { id: row.id, token: row.token, warning: "Session created but SMS failed to send." },
+      {
+        id: row.id,
+        token: row.token,
+        warning: "Session created but SMS failed to send.",
+        twilioError: { message: errMsg, code: errCode, status: errStatus, to: toPhone },
+      },
       { status: 207 },
     );
   }
