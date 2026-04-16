@@ -135,12 +135,12 @@ export default async function DashboardPage() {
                     <span>{formatDate(s.created_at)}</span>
                   </div>
                 </div>
-                <button
-                  type="button"
+                <Link
+                  href={`/ae/sessions/${s.id}`}
                   className="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-1"
                 >
                   View
-                </button>
+                </Link>
               </li>
             ))}
           </ul>
