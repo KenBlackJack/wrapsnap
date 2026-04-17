@@ -79,7 +79,7 @@ export default function ScanButton({ aeName }: { aeName: string }) {
           onKeyDown={(e) => { if (e.key === "Enter") handleStart(); }}
           placeholder='Vehicle description, e.g. "Route Van #3"'
           autoFocus
-          className="w-full rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
+          className="w-full rounded-lg bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
         />
         {error && <p className="text-xs text-red-200">{error}</p>}
         <div className="flex gap-2">

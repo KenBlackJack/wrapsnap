@@ -260,31 +260,73 @@ function Instructions({ onReady, onBack }: { onReady: () => void; onBack?: () =>
   );
 }
 
-// ─── Vehicle diagram SVG ─────────────────────────────────────────────────────
+// ─── Vehicle diagram SVG (top-down cargo van) ────────────────────────────────
 
 function VehicleDiagram({ activePanel }: { activePanel: number }) {
   const hi = "#007BBA";
   const lo = "#e5e7eb";
-  const f = (i: number) => activePanel === i ? hi : lo;
+  const f = (i: number) => (activePanel === i ? hi : lo);
+  const lc = (i: number) => (activePanel === i ? "white" : "#9ca3af");
 
+  // Panel order: 0=Driver Side, 1=Passenger Side, 2=Front, 3=Rear
   return (
-    <svg viewBox="0 0 200 240" className="w-32 mx-auto" aria-hidden="true">
-      {/* Front bumper */}
-      <rect x="45" y="8" width="110" height="26" rx="7" fill={f(2)} />
-      {/* Rear bumper */}
-      <rect x="45" y="206" width="110" height="26" rx="7" fill={f(3)} />
-      {/* Driver side */}
-      <rect x="8" y="44" width="32" height="152" rx="7" fill={f(0)} />
-      {/* Passenger side */}
-      <rect x="160" y="44" width="32" height="152" rx="7" fill={f(1)} />
-      {/* Body */}
-      <rect x="45" y="44" width="110" height="152" rx="4" fill="#f9fafb" stroke="#d1d5db" strokeWidth="1" />
-      {/* Front window */}
-      <rect x="58" y="56" width="84" height="52" rx="5" fill="#bfdbfe" opacity="0.65" />
+    <svg viewBox="0 0 200 340" className="w-32 mx-auto" aria-hidden="true">
+
+      {/* ── Panel indicator strips ── */}
+      {/* Front (index 2) — top */}
+      <rect x="55" y="3" width="90" height="23" rx="6" fill={f(2)} />
+      <text x="100" y="18" textAnchor="middle" fontSize="8.5" fontWeight="700"
+        fill={lc(2)} fontFamily="system-ui,sans-serif" letterSpacing="0.5">FRONT</text>
+
+      {/* Rear (index 3) — bottom */}
+      <rect x="55" y="314" width="90" height="23" rx="6" fill={f(3)} />
+      <text x="100" y="329" textAnchor="middle" fontSize="8.5" fontWeight="700"
+        fill={lc(3)} fontFamily="system-ui,sans-serif" letterSpacing="0.5">REAR</text>
+
+      {/* Driver Side (index 0) — left */}
+      <rect x="3" y="78" width="23" height="184" rx="6" fill={f(0)} />
+      <text x="14.5" y="170" textAnchor="middle" fontSize="7.5" fontWeight="700"
+        fill={lc(0)} fontFamily="system-ui,sans-serif" letterSpacing="0.3"
+        transform="rotate(-90,14.5,170)">DRIVER SIDE</text>
+
+      {/* Passenger Side (index 1) — right */}
+      <rect x="174" y="78" width="23" height="184" rx="6" fill={f(1)} />
+      <text x="185.5" y="170" textAnchor="middle" fontSize="7.5" fontWeight="700"
+        fill={lc(1)} fontFamily="system-ui,sans-serif" letterSpacing="0.3"
+        transform="rotate(90,185.5,170)">PASS. SIDE</text>
+
+      {/* ── Vehicle body ── */}
+      {/* Outer body rect */}
+      <rect x="31" y="30" width="138" height="280" rx="10"
+        fill="#f9fafb" stroke="#d1d5db" strokeWidth="1.5" />
+
+      {/* Cab section */}
+      <rect x="31" y="30" width="138" height="82" rx="10"
+        fill="#f1f5f9" stroke="#d1d5db" strokeWidth="1" />
+
+      {/* Windshield */}
+      <rect x="46" y="39" width="108" height="56" rx="5"
+        fill="#bfdbfe" opacity="0.7" />
+
+      {/* Cab-to-cargo divider */}
+      <line x1="31" y1="112" x2="169" y2="112" stroke="#d1d5db" strokeWidth="1.5" />
+
       {/* Rear window */}
-      <rect x="58" y="132" width="84" height="52" rx="5" fill="#bfdbfe" opacity="0.65" />
-      {/* Door line */}
-      <line x1="100" y1="44" x2="100" y2="196" stroke="#d1d5db" strokeWidth="1.5" strokeDasharray="5 3" />
+      <rect x="50" y="238" width="100" height="52" rx="4"
+        fill="#bfdbfe" opacity="0.4" />
+      {/* Rear window centre split */}
+      <line x1="100" y1="238" x2="100" y2="290"
+        stroke="#d1d5db" strokeWidth="1" strokeDasharray="4 3" />
+
+      {/* ── Wheels (top-down, darkened corners) ── */}
+      {/* Front-left */}
+      <rect x="31" y="46" width="16" height="34" rx="3" fill="#9ca3af" />
+      {/* Front-right */}
+      <rect x="153" y="46" width="16" height="34" rx="3" fill="#9ca3af" />
+      {/* Rear-left */}
+      <rect x="31" y="220" width="16" height="34" rx="3" fill="#9ca3af" />
+      {/* Rear-right */}
+      <rect x="153" y="220" width="16" height="34" rx="3" fill="#9ca3af" />
     </svg>
   );
 }
@@ -340,6 +382,11 @@ function PhotoCapture({
     if (preview) URL.revokeObjectURL(preview.url);
     setPreview({ file, url: URL.createObjectURL(file) });
     setUploadError(null);
+    // Re-lock to landscape after returning from the system camera app,
+    // which may have released the orientation lock.
+    (screen.orientation as { lock?: (o: string) => Promise<void> })
+      .lock?.("landscape")
+      ?.catch(() => {});
   }
 
   function handleRetake() {
@@ -351,6 +398,7 @@ function PhotoCapture({
 
   async function handleLooksGood() {
     if (!preview) return;
+    console.log(`[WrapSnap] handleLooksGood: panelIndex=${panelIndex} panel="${panel}"`);
     setUploading(true);
     setUploadError(null);
     try {
@@ -370,9 +418,13 @@ function PhotoCapture({
       setPhotos(updated);
       setPreview(null);
       setFileInputKey((k) => k + 1);
+
       if (panelIndex < PANELS.length - 1) {
-        setPanelIndex((i) => i + 1);
+        const next = panelIndex + 1;
+        console.log(`[WrapSnap] advancing to panel ${next} = "${PANELS[next]}"`);
+        setPanelIndex(next);
       } else {
+        console.log(`[WrapSnap] all ${PANELS.length} panels complete — calling onComplete`);
         onComplete(updated);
       }
     } catch (err) {
@@ -381,28 +433,6 @@ function PhotoCapture({
     } finally {
       setUploading(false);
     }
-  }
-
-  // Show rotate prompt if device is still in portrait
-  if (isPortrait) {
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-gray-900 p-8 text-center">
-        <svg
-          className="h-16 w-16 text-white animate-pulse"
-          fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"
-          aria-hidden="true"
-        >
-          {/* Phone with rotation arrow */}
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-        </svg>
-        <div>
-          <p className="text-xl font-semibold text-white">Please rotate your phone</p>
-          <p className="mt-2 text-sm text-gray-400 max-w-xs">
-            Turn your device to landscape mode for the best photo of the vehicle panel.
-          </p>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -466,6 +496,23 @@ function PhotoCapture({
                 >
                   {uploading ? "Uploading…" : "Looks good"}
                 </button>
+              </div>
+            </div>
+          ) : isPortrait ? (
+            /* Portrait gate — only blocks the camera step, not the preview */
+            <div className="flex flex-col items-center gap-5 flex-1 justify-center text-center px-4">
+              <svg
+                className="h-14 w-14 text-gray-400 animate-pulse"
+                fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+              </svg>
+              <div>
+                <p className="text-base font-semibold text-gray-700">Please rotate your phone</p>
+                <p className="mt-1 text-sm text-gray-400">
+                  Landscape mode gives a better view of the vehicle panel.
+                </p>
               </div>
             </div>
           ) : (
