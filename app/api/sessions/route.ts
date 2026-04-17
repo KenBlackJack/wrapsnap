@@ -45,14 +45,14 @@ export async function POST(req: NextRequest) {
   const createdBy = authSession.user.email;
 
   // Parse + validate body
-  let body: { client_name?: string; client_phone?: string; expires_in_hours?: number };
+  let body: { client_name?: string; client_phone?: string; expires_in_hours?: number; vehicle_description?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { client_name, client_phone, expires_in_hours } = body;
+  const { client_name, client_phone, expires_in_hours, vehicle_description } = body;
 
   if (!client_name?.trim()) {
     return NextResponse.json({ error: "client_name is required" }, { status: 400 });
@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
       pin: hashedPin,
       client_name: client_name.trim(),
       client_phone: client_phone.trim(),
+      vehicle_description: vehicle_description?.trim() || null,
       created_by: createdBy,
       expires_at: expiresAt,
       status: "pending",

@@ -15,9 +15,11 @@ export default function NewSessionPage() {
     setError(null);
 
     const form = e.currentTarget;
+    const vehicleDescription = (form.elements.namedItem("vehicle_description") as HTMLInputElement).value.trim();
     const body = {
       client_name: (form.elements.namedItem("client_name") as HTMLInputElement).value.trim(),
       client_phone: (form.elements.namedItem("client_phone") as HTMLInputElement).value.trim(),
+      vehicle_description: vehicleDescription || undefined,
       expires_in_hours: Number((form.elements.namedItem("expires_in_hours") as HTMLSelectElement).value),
     };
 
@@ -109,6 +111,21 @@ export default function NewSessionPage() {
               required
               autoComplete="off"
               placeholder="(555) 867-5309"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Vehicle description */}
+          <div>
+            <label htmlFor="vehicle_description" className="block text-sm font-medium text-gray-700 mb-1.5">
+              Vehicle description <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <input
+              id="vehicle_description"
+              name="vehicle_description"
+              type="text"
+              autoComplete="off"
+              placeholder='e.g. "Service Route Van #3"'
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>

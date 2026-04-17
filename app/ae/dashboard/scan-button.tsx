@@ -3,16 +3,25 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+type Step = "idle" | "form" | "loading";
+
+const CameraIcon = ({ className }: { className: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+  </svg>
+);
+
 export default function ScanButton({ aeName }: { aeName: string }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<Step>("idle");
+  const [vehicleDesc, setVehicleDesc] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  async function handleClick() {
-    setLoading(true);
+  async function handleStart() {
+    setStep("loading");
     setError(null);
     try {
-      // Create a self-scan session using the AE's name.
       // Phone is a placeholder — AE is on-site so no SMS is needed.
       // The route returns 207 when SMS fails but still includes id + token.
       const res = await fetch("/api/sessions", {
@@ -22,6 +31,7 @@ export default function ScanButton({ aeName }: { aeName: string }) {
           client_name: aeName,
           client_phone: "0000000000",
           expires_in_hours: 24,
+          vehicle_description: vehicleDesc.trim() || undefined,
         }),
       });
 
@@ -34,40 +44,82 @@ export default function ScanButton({ aeName }: { aeName: string }) {
       router.push(`/scan/${data.token}?ae=1`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
-      setLoading(false);
+      setStep("form");
     }
   }
 
+  if (step === "loading") {
+    return (
+      <div
+        className="flex flex-col items-center justify-center gap-3 rounded-xl p-5"
+        style={{ backgroundColor: "#007BBA", minHeight: "120px" }}
+      >
+        <svg className="h-6 w-6 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+        </svg>
+        <p className="text-sm font-medium text-white">Starting scan…</p>
+      </div>
+    );
+  }
+
+  if (step === "form") {
+    return (
+      <div className="flex flex-col gap-3 rounded-xl p-5" style={{ backgroundColor: "#007BBA" }}>
+        <div className="flex items-center gap-2">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/20">
+            <CameraIcon className="h-5 w-5 text-white" />
+          </div>
+          <p className="font-semibold text-white">Scan a Vehicle</p>
+        </div>
+        <input
+          type="text"
+          value={vehicleDesc}
+          onChange={(e) => setVehicleDesc(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleStart(); }}
+          placeholder='Vehicle description, e.g. "Route Van #3"'
+          autoFocus
+          className="w-full rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
+        />
+        {error && <p className="text-xs text-red-200">{error}</p>}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => { setStep("idle"); setVehicleDesc(""); setError(null); }}
+            className="flex-1 rounded-lg border border-white/40 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleStart}
+            className="flex-1 rounded-lg bg-white py-2.5 text-sm font-semibold transition hover:opacity-90"
+            style={{ color: "#007BBA" }}
+          >
+            Start Scan
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // idle
   return (
     <div className="flex flex-col">
       <button
         type="button"
-        onClick={handleClick}
-        disabled={loading}
-        className="flex flex-1 flex-col items-start gap-3 rounded-xl p-5 text-left transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60"
+        onClick={() => setStep("form")}
+        className="flex flex-1 flex-col items-start gap-3 rounded-xl p-5 text-left transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2"
         style={{ backgroundColor: "#007BBA" }}
       >
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-          {loading ? (
-            <svg className="h-5 w-5 animate-spin text-white" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-            </svg>
-          ) : (
-            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-            </svg>
-          )}
+          <CameraIcon className="h-5 w-5 text-white" />
         </div>
         <div>
-          <p className="font-semibold text-white">{loading ? "Starting…" : "Scan a Vehicle"}</p>
+          <p className="font-semibold text-white">Scan a Vehicle</p>
           <p className="mt-0.5 text-sm text-white/70">I&apos;m on site — take measurements myself</p>
         </div>
       </button>
-      {error && (
-        <p className="mt-2 text-xs text-red-600">{error}</p>
-      )}
     </div>
   );
 }
