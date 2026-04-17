@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { getSupabaseClient } from "@/lib/supabase";
 import CopyLink from "./copy-link";
 import PinReveal from "./pin-reveal";
+import AnnotatedPhoto, { type VinylZone } from "./annotated-photo";
 
 export const dynamic = "force-dynamic";
 
@@ -39,11 +40,12 @@ function formatDateTime(iso: string) {
 }
 
 interface PanelEstimate {
-  name: string;
+  panel: string;
+  name?: string;
   sqft: number;
   sqft_low: number;
   sqft_high: number;
-  graphics?: { type: string; sqft: number }[];
+  vinyl_zones?: VinylZone[];
 }
 
 export default async function SessionDetailPage({
@@ -103,6 +105,18 @@ export default async function SessionDetailPage({
     .limit(1);
 
   const estimate = estimates?.[0] ?? null;
+
+  // Build a map of panel slug → vinyl zones for annotation overlay
+  const zonesByPanel: Record<string, VinylZone[]> = {};
+  if (estimate && Array.isArray(estimate.panels)) {
+    for (const p of estimate.panels as PanelEstimate[]) {
+      const slug = p.panel ?? p.name;
+      if (slug && Array.isArray(p.vinyl_zones)) {
+        zonesByPanel[slug] = p.vinyl_zones;
+      }
+    }
+  }
+
   const scanUrl = `https://wrapsnap.advertisingvehicles.com/scan/${session.token}`;
   const status = session.status as SessionStatus;
 
@@ -195,17 +209,15 @@ export default async function SessionDetailPage({
             {PANELS.map(({ slug, label }) => {
               const signedUrl = uploadsBySlug[slug];
               return (
-                <div key={slug} className="relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+                <div key={slug}>
                   {signedUrl ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={signedUrl} alt={label} className="w-full h-full object-cover" />
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-3 py-2">
-                        <p className="text-white text-xs font-medium">{label}</p>
-                      </div>
-                    </>
+                    <AnnotatedPhoto
+                      imageUrl={signedUrl}
+                      zones={zonesByPanel[slug] ?? []}
+                      panelLabel={label}
+                    />
                   ) : (
-                    <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center">
+                    <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 border border-gray-200 flex flex-col items-center justify-center gap-2 p-4 text-center">
                       <svg className="h-7 w-7 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 3h18M3 3v18M3 3l18 18" />
                       </svg>
@@ -267,8 +279,8 @@ export default async function SessionDetailPage({
                 <p className="text-sm font-medium text-gray-700 mb-2">Panel breakdown</p>
                 <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 overflow-hidden text-sm">
                   {(estimate.panels as PanelEstimate[]).map((panel) => (
-                    <div key={panel.name} className="flex items-center justify-between px-4 py-2.5 bg-white">
-                      <span className="capitalize text-gray-700">{panel.name?.replace(/_/g, " ")}</span>
+                    <div key={panel.panel ?? panel.name} className="flex items-center justify-between px-4 py-2.5 bg-white">
+                      <span className="capitalize text-gray-700">{(panel.panel ?? panel.name)?.replace(/_/g, " ")}</span>
                       <span className="font-medium text-gray-900">
                         {panel.sqft != null ? `${panel.sqft.toFixed(1)} sq ft` : "—"}
                         {panel.sqft_low != null && panel.sqft_high != null && (

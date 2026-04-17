@@ -49,6 +49,12 @@ For each vinyl zone, measure pixel dimensions, convert to inches using the persp
 Convert to square feet (sq in ÷ 144). Provide best-estimate sqft, conservative sqft_low, and generous sqft_high.
 Set paint_color_warning: true for any cut vinyl whose color is within one shade of the vehicle's base paint color.
 
+Also estimate a bounding box for each vinyl zone as percentages of the image dimensions (0.0 to 1.0), with (0,0) at the top-left corner of the image:
+- x_pct: left edge of the zone / image width
+- y_pct: top edge of the zone / image height
+- width_pct: zone width / image width
+- height_pct: zone height / image height
+
 STEP 5 — PRODUCE JSON OUTPUT
 Return ONLY valid JSON — no markdown fences, no explanation, no trailing text:
 
@@ -71,7 +77,8 @@ Return ONLY valid JSON — no markdown fences, no explanation, no trailing text:
           "sqft_low": 0.0,
           "sqft_high": 0.0,
           "cut_vinyl_color": "<color description if cut_vinyl, else null>",
-          "paint_color_warning": false
+          "paint_color_warning": false,
+          "bbox": { "x_pct": 0.0, "y_pct": 0.0, "width_pct": 0.0, "height_pct": 0.0 }
         }
       ],
       "panel_sqft": 0.0,
