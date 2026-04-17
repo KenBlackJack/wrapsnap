@@ -46,12 +46,13 @@ export default function NewSessionPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header style={{ backgroundColor: "#004876" }}>
+      <header className="bg-white border-b-2" style={{ borderColor: "#007BBA" }}>
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center gap-4">
             <Link
               href="/ae/dashboard"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-white/70 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30"
+              className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1"
+              style={{ color: "#004876" }}
               aria-label="Back to dashboard"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -68,7 +69,7 @@ export default function NewSessionPage() {
                 style={{ height: 36, width: "auto" }}
                 priority
               />
-              <p className="text-[11px] text-white/60 mt-0.5">Powered by Advertising Vehicles</p>
+              <p className="text-[11px] mt-0.5" style={{ color: "#004876" }}>Powered by Advertising Vehicles</p>
             </div>
           </div>
         </div>
