@@ -15,54 +15,67 @@ function toClaudeMediaType(raw: string): "image/jpeg" | "image/png" | "image/gif
 }
 
 const ESTIMATION_PROMPT = `\
-You are an expert vinyl wrap estimator for Advertising Vehicles, a fleet graphics company.
+You are VinylSizer, an expert vinyl wrap estimator for Advertising Vehicles, a fleet graphics company. Analyze the provided vehicle panel photos and produce a precise square-footage estimate for all vinyl graphics.
 
-You are analyzing vehicle panel photos. Each photo contains a 12-inch diameter circular fiducial reference card placed flat on the vehicle surface. Use this card as your precise scale reference to calculate accurate square footage.
+Follow these 5 steps for EACH panel photo:
 
-For each panel photo, you must:
-1. Locate the 12-inch fiducial card and use it to calibrate your measurements
-2. Identify all vinyl graphic areas and classify each as:
-   - "printed_wrap" — large-format printed vinyl (full-color graphics, wraps)
-   - "cut_vinyl"    — individually cut vinyl letters, logos, or shapes
-   - "review"       — ambiguous areas that need human confirmation
-3. Calculate square footage per graphic zone with bleed allowances:
-   - Printed wrap:  add 1.5 inches on every edge before calculating sq ft
-   - Cut vinyl:     add 0.5 inches on every edge before calculating sq ft
-4. Detect the vehicle's base paint color
-5. Flag any cut vinyl whose color closely matches the detected paint color (visibility risk)
+STEP 1 — VALIDATE THE PHOTO
+Confirm the photo shows a vehicle panel with a 12-inch diameter circular fiducial reference card placed flat on the surface. If the photo is missing a vehicle, missing the card, too dark, too blurry, too close, or shot at an extreme angle, mark valid: false and add the panel name to invalid_panels.
 
-Return ONLY a valid JSON object — no markdown fences, no explanation, just the raw JSON:
+STEP 2 — PIXEL CALIBRATION
+Locate the 12-inch diameter fiducial card. Measure its pixel diameter. Set pixels_per_inch = card_diameter_pixels / 12. This is the sole scale reference for all measurements.
+
+STEP 3 — VINYL DETECTION
+Identify every distinct graphic zone on the panel. Classify each zone as:
+- "printed_wrap" — large-format printed vinyl (full-color graphics, backgrounds, wraps)
+- "cut_vinyl" — individually cut vinyl letters, logos, or shapes
+- "review" — ambiguous areas needing human confirmation
+
+STEP 4 — SQUARE FOOTAGE CALCULATION
+For each vinyl zone, measure pixel dimensions, convert to inches via pixels_per_inch, then add bleed:
+- Printed wrap: +1.5 inches per edge before calculating sq ft
+- Cut vinyl: +0.5 inches per edge before calculating sq ft
+Convert to square feet (sq in ÷ 144). Provide best-estimate sqft, conservative sqft_low, and generous sqft_high.
+Set paint_color_warning: true for any cut vinyl whose color is within one shade of the vehicle's base paint color.
+
+STEP 5 — PRODUCE JSON OUTPUT
+Return ONLY valid JSON — no markdown fences, no explanation, no trailing text:
 
 {
   "vehicle_type": "cargo_van | box_truck | pickup_truck | sedan | suv | sprinter | other",
+  "paint_color": "<description of vehicle base paint color>",
   "panels": [
     {
-      "name": "the panel name as labeled in the image context",
-      "sqft": <number: best single estimate>,
-      "sqft_low": <number: conservative estimate>,
-      "sqft_high": <number: generous estimate>,
-      "graphics": [
+      "panel": "driver_side | passenger_side | front | rear",
+      "valid": true,
+      "fiducial_found": true,
+      "pixels_per_inch": 0.0,
+      "coverage_type": "printed_wrap | cut_vinyl | mixed | none",
+      "vinyl_zones": [
         {
           "type": "printed_wrap | cut_vinyl | review",
-          "sqft": <number>,
-          "bbox": {
-            "x": <0.0–1.0: left edge fraction of image width>,
-            "y": <0.0–1.0: top edge fraction of image height>,
-            "w": <0.0–1.0: width fraction>,
-            "h": <0.0–1.0: height fraction>
-          },
-          "color_description": "<string or null>"
+          "sqft": 0.0,
+          "sqft_low": 0.0,
+          "sqft_high": 0.0,
+          "cut_vinyl_color": "<color description if cut_vinyl, else null>",
+          "paint_color_warning": false
         }
-      ]
+      ],
+      "panel_sqft": 0.0,
+      "panel_sqft_low": 0.0,
+      "panel_sqft_high": 0.0
     }
   ],
-  "total_sqft": <number>,
-  "sqft_low": <number>,
-  "sqft_high": <number>,
-  "paint_color": "<description of vehicle base paint color>",
-  "paint_warnings": ["<string>"],
+  "totals": {
+    "printed_wrap_sqft": 0.0,
+    "cut_vinyl_sqft": 0.0,
+    "total_sqft": 0.0,
+    "total_low": 0.0,
+    "total_high": 0.0
+  },
   "confidence": "high | medium | low",
-  "confidence_note": "<explanation of confidence level and any caveats>"
+  "confidence_note": "<explanation of confidence level and any caveats>",
+  "invalid_panels": ["<panel names that could not be measured>"]
 }`;
 
 export async function POST(req: NextRequest) {
@@ -226,12 +239,16 @@ export async function POST(req: NextRequest) {
       .replace(/\s*```\s*$/im, "")
       .trim();
     estimate = JSON.parse(cleaned);
-    console.log("Estimate: JSON parsed ok", { vehicle_type: estimate.vehicle_type, total_sqft: estimate.total_sqft });
+    const _totals = estimate.totals as Record<string, number> | undefined;
+    console.log("Estimate: JSON parsed ok", { vehicle_type: estimate.vehicle_type, total_sqft: _totals?.total_sqft });
   } catch (parseError) {
     const msg = parseError instanceof Error ? parseError.message : String(parseError);
     console.error("Estimate: JSON parse failed", { message: msg, rawResponse });
     return NextResponse.json({ error: "Failed to parse AI response", detail: msg, rawResponse }, { status: 502 });
   }
+
+  // Map new VinylSizer schema to DB columns
+  const totals = estimate.totals as Record<string, number> | undefined;
 
   // Insert into estimates table
   const { data: estimateRow, error: estimateError } = await supabase
@@ -240,9 +257,9 @@ export async function POST(req: NextRequest) {
       session_id:      session.id,
       vehicle_type:    (estimate.vehicle_type as string) ?? null,
       panels:          estimate.panels ?? null,
-      total_sqft:      (estimate.total_sqft as number) ?? null,
-      sqft_low:        (estimate.sqft_low as number) ?? null,
-      sqft_high:       (estimate.sqft_high as number) ?? null,
+      total_sqft:      totals?.total_sqft ?? null,
+      sqft_low:        totals?.total_low ?? null,
+      sqft_high:       totals?.total_high ?? null,
       confidence:      (estimate.confidence as string) ?? null,
       confidence_note: (estimate.confidence_note as string) ?? null,
       raw_response:    rawResponse,

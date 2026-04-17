@@ -345,6 +345,8 @@ function PhotoCapture({
   const [preview, setPreview] = useState<{ file: File; url: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // rejection holds the friendly Claude rejection message (422); distinct from a generic upload error
+  const [rejection, setRejection] = useState<string | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -361,12 +363,14 @@ function PhotoCapture({
     if (preview) URL.revokeObjectURL(preview.url);
     setPreview({ file, url: URL.createObjectURL(file) });
     setUploadError(null);
+    setRejection(null);
   }
 
   function handleRetake() {
     if (preview) URL.revokeObjectURL(preview.url);
     setPreview(null);
     setUploadError(null);
+    setRejection(null);
     setFileInputKey((k) => k + 1);
   }
 
@@ -392,6 +396,7 @@ function PhotoCapture({
     console.log(`[WrapSnap] handleLooksGood: ref=${panelIndexRef.current} panel="${currentPanel}"`);
     setUploading(true);
     setUploadError(null);
+    setRejection(null);
     try {
       const formData = new FormData();
       formData.append("token", token);
@@ -399,6 +404,16 @@ function PhotoCapture({
       formData.append("file", preview.file);
 
       const res = await fetch("/api/upload", { method: "POST", body: formData });
+
+      if (res.status === 422) {
+        // Claude rejected the photo — show the friendly message, do NOT advance
+        const data = await res.json().catch(() => ({}));
+        const msg = (data.rejection_message as string | undefined) ?? "This photo couldn't be used. Please retake it.";
+        console.warn(`[WrapSnap] photo rejected: ${data.rejection_reason} — ${msg}`);
+        setRejection(msg);
+        return;
+      }
+
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? `Upload failed (HTTP ${res.status})`);
@@ -425,6 +440,7 @@ function PhotoCapture({
   function handleSkipAndContinue() {
     console.log(`[WrapSnap] skipping upload for "${PANELS[panelIndexRef.current]}"`);
     setUploadError(null);
+    setRejection(null);
     setPreview(null);
     setFileInputKey((k) => k + 1);
     // Don't add to photos — estimate will work with whatever panels are present
@@ -470,14 +486,22 @@ function PhotoCapture({
                 />
               </div>
 
+              {/* Claude rejection — friendly message above the Retake button, no skip option */}
+              {rejection && (
+                <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-3 text-sm text-red-700">
+                  <p className="font-semibold mb-0.5">Photo couldn&apos;t be used</p>
+                  <p className="text-xs leading-snug">{rejection}</p>
+                </div>
+              )}
+
               {/* Landscape note — reassures the user if the preview appears portrait */}
-              {!uploadError && (
+              {!rejection && !uploadError && (
                 <p className="text-xs text-gray-400 text-center">
                   If the photo looks sideways, that&apos;s fine — landscape orientation is preserved in the estimate.
                 </p>
               )}
 
-              {/* Upload error with full detail + skip option */}
+              {/* Generic upload error with full detail + skip option */}
               {uploadError && (
                 <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-3 text-sm text-red-700">
                   <p className="font-semibold">Upload failed</p>
