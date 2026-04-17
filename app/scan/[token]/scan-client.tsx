@@ -187,8 +187,8 @@ const INSTRUCTIONS = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
       </svg>
     ),
-    title: "Place the reference card",
-    body: "Lay the magnetic WrapSnap card flat on the vehicle panel before each photo.",
+    title: "Place TWO reference cards",
+    body: "Place one magnetic WrapSnap card near the front of the panel and one near the rear — both flat on the vehicle surface.",
   },
   {
     icon: (
@@ -197,7 +197,7 @@ const INSTRUCTIONS = [
       </svg>
     ),
     title: "Step back",
-    body: "Make sure the entire panel and the reference card are both fully visible in the frame.",
+    body: "Make sure the full panel is visible with both cards clearly in frame.",
   },
   {
     icon: (
