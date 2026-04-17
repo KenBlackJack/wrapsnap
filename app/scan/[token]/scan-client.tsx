@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -346,35 +346,14 @@ function PhotoCapture({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
-  const [isPortrait, setIsPortrait] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const panel = PANELS[panelIndex];
+  // Refs mirror state so closures always read the current value even if the
+  // iOS tab was suspended/unfrozen while the native camera was open.
+  const panelIndexRef = useRef(0);
+  const photosRef = useRef<CapturedPhoto[]>([]);
 
-  // Lock to landscape on mount; show overlay if device is in portrait
-  useEffect(() => {
-    // `lock` is not in all TS DOM lib versions — cast to access it
-    type ExtendedOrientation = ScreenOrientation & {
-      lock?: (orientation: string) => Promise<void>;
-    };
-    const orientation = screen.orientation as ExtendedOrientation;
-    orientation.lock?.("landscape")?.catch(() => {
-      // Not supported on this browser/device — fall through to manual prompt
-    });
-
-    const checkOrientation = () => {
-      setIsPortrait(window.innerHeight > window.innerWidth);
-    };
-    checkOrientation();
-    window.addEventListener("resize", checkOrientation);
-    screen.orientation.addEventListener("change", checkOrientation);
-
-    return () => {
-      window.removeEventListener("resize", checkOrientation);
-      screen.orientation.removeEventListener("change", checkOrientation);
-      try { screen.orientation.unlock(); } catch { /* ignore */ }
-    };
-  }, []);
+  const panel = PANELS[panelIndexRef.current];
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -382,11 +361,6 @@ function PhotoCapture({
     if (preview) URL.revokeObjectURL(preview.url);
     setPreview({ file, url: URL.createObjectURL(file) });
     setUploadError(null);
-    // Re-lock to landscape after returning from the system camera app,
-    // which may have released the orientation lock.
-    (screen.orientation as { lock?: (o: string) => Promise<void> })
-      .lock?.("landscape")
-      ?.catch(() => {});
   }
 
   function handleRetake() {
@@ -396,43 +370,65 @@ function PhotoCapture({
     setFileInputKey((k) => k + 1);
   }
 
+  /** Advance to the next panel (or finish) using the ref so the value is
+   *  never stale regardless of when the closure was created. */
+  function advance(updated: CapturedPhoto[]) {
+    const current = panelIndexRef.current;
+    console.log(`[WrapSnap] advance: current=${current}/${PANELS.length - 1} panel="${PANELS[current]}"`);
+    if (current < PANELS.length - 1) {
+      const next = current + 1;
+      panelIndexRef.current = next;
+      setPanelIndex(next);
+      console.log(`[WrapSnap] → moved to panel ${next} = "${PANELS[next]}"`);
+    } else {
+      console.log(`[WrapSnap] → all panels complete`);
+      onComplete(updated);
+    }
+  }
+
   async function handleLooksGood() {
     if (!preview) return;
-    console.log(`[WrapSnap] handleLooksGood: panelIndex=${panelIndex} panel="${panel}"`);
+    const currentPanel = PANELS[panelIndexRef.current];
+    console.log(`[WrapSnap] handleLooksGood: ref=${panelIndexRef.current} panel="${currentPanel}"`);
     setUploading(true);
     setUploadError(null);
     try {
       const formData = new FormData();
       formData.append("token", token);
-      formData.append("panel", panel);
+      formData.append("panel", currentPanel);
       formData.append("file", preview.file);
 
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? `Upload failed (${res.status})`);
+        throw new Error(data.error ?? `Upload failed (HTTP ${res.status})`);
       }
 
-      const newPhoto: CapturedPhoto = { panel, file: preview.file, preview: preview.url };
-      const updated = [...photos, newPhoto];
+      const newPhoto: CapturedPhoto = { panel: currentPanel, file: preview.file, preview: preview.url };
+      const updated = [...photosRef.current, newPhoto];
+      photosRef.current = updated;
       setPhotos(updated);
       setPreview(null);
       setFileInputKey((k) => k + 1);
-
-      if (panelIndex < PANELS.length - 1) {
-        const next = panelIndex + 1;
-        console.log(`[WrapSnap] advancing to panel ${next} = "${PANELS[next]}"`);
-        setPanelIndex(next);
-      } else {
-        console.log(`[WrapSnap] all ${PANELS.length} panels complete — calling onComplete`);
-        onComplete(updated);
-      }
+      advance(updated);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Upload failed. Please try again.";
+      console.error(`[WrapSnap] upload error: ${msg}`);
       setUploadError(msg);
     } finally {
       setUploading(false);
     }
+  }
+
+  /** Skip uploading this panel and move on. The photo won't be in Supabase
+   *  so the estimate may be less accurate, but the flow stays unblocked. */
+  function handleSkipAndContinue() {
+    console.log(`[WrapSnap] skipping upload for "${PANELS[panelIndexRef.current]}"`);
+    setUploadError(null);
+    setPreview(null);
+    setFileInputKey((k) => k + 1);
+    // Don't add to photos — estimate will work with whatever panels are present
+    advance(photosRef.current);
   }
 
   return (
@@ -473,11 +469,29 @@ function PhotoCapture({
                   className="w-full h-full object-cover"
                 />
               </div>
-              {uploadError && (
-                <p className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
-                  {uploadError}
+
+              {/* Landscape note — reassures the user if the preview appears portrait */}
+              {!uploadError && (
+                <p className="text-xs text-gray-400 text-center">
+                  If the photo looks sideways, that&apos;s fine — landscape orientation is preserved in the estimate.
                 </p>
               )}
+
+              {/* Upload error with full detail + skip option */}
+              {uploadError && (
+                <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-3 text-sm text-red-700">
+                  <p className="font-semibold">Upload failed</p>
+                  <p className="mt-0.5 text-xs break-all">{uploadError}</p>
+                  <button
+                    type="button"
+                    onClick={handleSkipAndContinue}
+                    className="mt-2 text-xs font-semibold underline underline-offset-2"
+                  >
+                    Skip this photo and continue →
+                  </button>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -496,23 +510,6 @@ function PhotoCapture({
                 >
                   {uploading ? "Uploading…" : "Looks good"}
                 </button>
-              </div>
-            </div>
-          ) : isPortrait ? (
-            /* Portrait gate — only blocks the camera step, not the preview */
-            <div className="flex flex-col items-center gap-5 flex-1 justify-center text-center px-4">
-              <svg
-                className="h-14 w-14 text-gray-400 animate-pulse"
-                fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-              </svg>
-              <div>
-                <p className="text-base font-semibold text-gray-700">Please rotate your phone</p>
-                <p className="mt-1 text-sm text-gray-400">
-                  Landscape mode gives a better view of the vehicle panel.
-                </p>
               </div>
             </div>
           ) : (
