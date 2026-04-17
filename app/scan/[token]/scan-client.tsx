@@ -22,26 +22,30 @@ interface CapturedPhoto {
 function Logo({ size = "large" }: { size?: "large" | "small" }) {
   if (size === "small") {
     return (
-      <Image
-        src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
-        alt="WrapSnap"
-        width={120}
-        height={32}
-        style={{ height: 32, width: "auto" }}
-        priority
-      />
+      <div className="bg-white rounded">
+        <Image
+          src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
+          alt="WrapSnap"
+          width={110}
+          height={28}
+          style={{ height: 28, width: "auto", display: "block" }}
+          priority
+        />
+      </div>
     );
   }
   return (
-    <div className="flex flex-col items-center mb-8">
-      <Image
-        src="/images/WrapSnap_Logo_Horizontal_LG.jpg"
-        alt="WrapSnap"
-        width={200}
-        height={56}
-        style={{ maxWidth: 200, width: "100%", height: "auto" }}
-        priority
-      />
+    <div className="flex flex-col items-center mb-6">
+      <div className="bg-white rounded">
+        <Image
+          src="/images/WrapSnap_Logo_Horizontal_LG.jpg"
+          alt="WrapSnap"
+          width={200}
+          height={56}
+          style={{ maxWidth: 200, width: "100%", height: "auto", display: "block" }}
+          priority
+        />
+      </div>
       <p className="mt-1.5 text-xs text-gray-400">by Advertising Vehicles</p>
     </div>
   );
@@ -223,15 +227,16 @@ const INSTRUCTIONS = [
 
 function Instructions({ onReady, onBack }: { onReady: () => void; onBack?: () => void }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col p-6">
-      <div className="w-full max-w-sm mx-auto flex flex-col flex-1">
-        <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="w-full max-w-sm mx-auto flex flex-col flex-1 px-5 pt-5 pb-24">
+        {/* Top bar */}
+        <div className="flex items-center justify-between mb-4">
           <Logo size="small" />
           {onBack && (
             <button
               type="button"
               onClick={onBack}
-              className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition"
+              className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700 transition"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -240,31 +245,43 @@ function Instructions({ onReady, onBack }: { onReady: () => void; onBack?: () =>
             </button>
           )}
         </div>
-        <h1 className="text-2xl font-semibold text-gray-900 text-center mb-1">
+
+        <h1 className="text-xl font-semibold text-gray-900 text-center mb-0.5">
           Before you start
         </h1>
-        <p className="text-sm text-gray-500 text-center mb-7">
+        <p className="text-xs text-gray-500 text-center mb-4">
           Follow these steps for the most accurate estimate.
         </p>
 
-        <div className="space-y-3 flex-1">
+        <div className="space-y-2">
           {INSTRUCTIONS.map((step, i) => (
-            <div key={i} className="flex gap-4 rounded-2xl bg-white border border-gray-200 p-4 shadow-sm">
+            <div key={i} className="flex gap-3 rounded-xl bg-white border border-gray-200 p-3 shadow-sm">
               <div
-                className="shrink-0 flex h-12 w-12 items-center justify-center rounded-xl"
+                className="shrink-0 flex h-9 w-9 items-center justify-center rounded-lg"
                 style={{ backgroundColor: "#EBF5FB", color: "#007BBA" }}
               >
-                {step.icon}
+                {/* Smaller icon: clone with h-5 w-5 */}
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  {i === 0 && <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />}
+                  {i === 1 && <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />}
+                  {i === 2 && <>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                  </>}
+                </svg>
               </div>
-              <div>
-                <p className="font-semibold text-gray-900 text-sm">{step.title}</p>
-                <p className="text-sm text-gray-500 mt-0.5 leading-snug">{step.body}</p>
+              <div className="min-w-0">
+                <p className="font-semibold text-gray-900 text-sm leading-tight">{step.title}</p>
+                <p className="text-xs text-gray-500 mt-0.5 leading-snug">{step.body}</p>
               </div>
             </div>
           ))}
         </div>
+      </div>
 
-        <div className="mt-8">
+      {/* Fixed CTA — always above the fold */}
+      <div className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 px-5 py-4 safe-area-pb">
+        <div className="w-full max-w-sm mx-auto">
           <PrimaryButton onClick={onReady}>I&apos;m ready</PrimaryButton>
         </div>
       </div>
@@ -272,73 +289,129 @@ function Instructions({ onReady, onBack }: { onReady: () => void; onBack?: () =>
   );
 }
 
-// ─── Vehicle diagram SVG (top-down cargo van) ────────────────────────────────
+// ─── Vehicle diagram SVG (side-profile cargo van) ────────────────────────────
+// Panel order: 0=Driver Side, 1=Passenger Side, 2=Front, 3=Rear
+// Van faces right: front on left, rear on right.
 
 function VehicleDiagram({ activePanel }: { activePanel: number }) {
-  const hi = "#007BBA";
-  const lo = "#e5e7eb";
-  const f = (i: number) => (activePanel === i ? hi : lo);
-  const lc = (i: number) => (activePanel === i ? "white" : "#9ca3af");
+  const hi      = "#007BBA";
+  const hiLight = "#dbeafe";
+  const body    = "#374151";
+  const dim     = "#9ca3af";
 
-  // Panel order: 0=Driver Side, 1=Passenger Side, 2=Front, 3=Rear
+  const sideActive  = activePanel === 0 || activePanel === 1;
+  const frontActive = activePanel === 2;
+  const rearActive  = activePanel === 3;
+
+  // Geometry constants
+  // Cab: x=12..92  Cargo: x=92..278  Rear doors: x=248..278
+  // Body: y=22 (top) .. y=122 (bottom)
+  // Wheels: cy=142, r=17  Front cx=50  Rear cx=228
+
+  const cabPath   = "M 12 122 L 12 90 L 20 78 L 56 78 L 72 22 L 92 22 L 92 122 Z";
+  // Windshield glass polygon (inside cab outline)
+  const glassPath = "M 22 76 L 58 76 L 72 26 L 90 26 L 90 60 L 36 76 Z";
+
   return (
-    <svg viewBox="0 0 200 340" className="w-32 mx-auto" aria-hidden="true">
+    <svg viewBox="0 0 310 175" className="w-full max-w-[280px] mx-auto" aria-hidden="true">
 
-      {/* ── Panel indicator strips ── */}
-      {/* Front (index 2) — top */}
-      <rect x="55" y="3" width="90" height="23" rx="6" fill={f(2)} />
-      <text x="100" y="18" textAnchor="middle" fontSize="8.5" fontWeight="700"
-        fill={lc(2)} fontFamily="system-ui,sans-serif" letterSpacing="0.5">FRONT</text>
+      {/* ── Wheels (behind body) ── */}
+      <circle cx="50"  cy="142" r="17" fill="#1f2937" />
+      <circle cx="50"  cy="142" r="10" fill="#374151" />
+      <circle cx="50"  cy="142" r="3.5" fill="#9ca3af" />
+      <circle cx="228" cy="142" r="17" fill="#1f2937" />
+      <circle cx="228" cy="142" r="10" fill="#374151" />
+      <circle cx="228" cy="142" r="3.5" fill="#9ca3af" />
 
-      {/* Rear (index 3) — bottom */}
-      <rect x="55" y="314" width="90" height="23" rx="6" fill={f(3)} />
-      <text x="100" y="329" textAnchor="middle" fontSize="8.5" fontWeight="700"
-        fill={lc(3)} fontFamily="system-ui,sans-serif" letterSpacing="0.5">REAR</text>
+      {/* ── Highlight fills (behind body strokes) ── */}
+      {sideActive && (
+        <rect x="92" y="22" width="186" height="100" fill={hiLight} />
+      )}
+      {frontActive && (
+        <path d={cabPath} fill={hiLight} />
+      )}
+      {rearActive && (
+        <rect x="248" y="22" width="30" height="100" fill={hiLight} />
+      )}
 
-      {/* Driver Side (index 0) — left */}
-      <rect x="3" y="78" width="23" height="184" rx="6" fill={f(0)} />
-      <text x="14.5" y="170" textAnchor="middle" fontSize="7.5" fontWeight="700"
-        fill={lc(0)} fontFamily="system-ui,sans-serif" letterSpacing="0.3"
-        transform="rotate(-90,14.5,170)">DRIVER SIDE</text>
+      {/* ── Cargo body ── */}
+      <rect
+        x="92" y="22" width="186" height="100" rx="2"
+        fill="white"
+        stroke={sideActive ? hi : body}
+        strokeWidth={sideActive ? 2.5 : 1.5}
+      />
 
-      {/* Passenger Side (index 1) — right */}
-      <rect x="174" y="78" width="23" height="184" rx="6" fill={f(1)} />
-      <text x="185.5" y="170" textAnchor="middle" fontSize="7.5" fontWeight="700"
-        fill={lc(1)} fontFamily="system-ui,sans-serif" letterSpacing="0.3"
-        transform="rotate(90,185.5,170)">PASS. SIDE</text>
+      {/* Rear door split line */}
+      <line
+        x1="248" y1="22" x2="248" y2="122"
+        stroke={rearActive ? hi : dim}
+        strokeWidth={rearActive ? 2.5 : 1}
+        strokeDasharray={rearActive ? undefined : "4 3"}
+      />
+      {/* Rear face border (shown when rear active) */}
+      {rearActive && (
+        <rect x="248" y="22" width="30" height="100"
+          fill="none" stroke={hi} strokeWidth="2.5" rx="1" />
+      )}
 
-      {/* ── Vehicle body ── */}
-      {/* Outer body rect */}
-      <rect x="31" y="30" width="138" height="280" rx="10"
-        fill="#f9fafb" stroke="#d1d5db" strokeWidth="1.5" />
+      {/* Rear door handle */}
+      <circle cx="254" cy="72" r="2" fill={dim} />
 
-      {/* Cab section */}
-      <rect x="31" y="30" width="138" height="82" rx="10"
-        fill="#f1f5f9" stroke="#d1d5db" strokeWidth="1" />
+      {/* Cargo panel line (horizontal centre) */}
+      <line x1="92" y1="72" x2="248" y2="72"
+        stroke="#e5e7eb" strokeWidth="1" strokeDasharray="5 4" />
 
-      {/* Windshield */}
-      <rect x="46" y="39" width="108" height="56" rx="5"
-        fill="#bfdbfe" opacity="0.7" />
+      {/* ── Cab section ── */}
+      <path
+        d={cabPath}
+        fill="white"
+        stroke={frontActive ? hi : body}
+        strokeWidth={frontActive ? 2.5 : 1.5}
+        strokeLinejoin="round"
+      />
 
-      {/* Cab-to-cargo divider */}
-      <line x1="31" y1="112" x2="169" y2="112" stroke="#d1d5db" strokeWidth="1.5" />
+      {/* Windshield glass */}
+      <path d={glassPath}
+        fill="#bfdbfe" opacity="0.55"
+        stroke="#93c5fd" strokeWidth="0.8" />
 
-      {/* Rear window */}
-      <rect x="50" y="238" width="100" height="52" rx="4"
-        fill="#bfdbfe" opacity="0.4" />
-      {/* Rear window centre split */}
-      <line x1="100" y1="238" x2="100" y2="290"
-        stroke="#d1d5db" strokeWidth="1" strokeDasharray="4 3" />
+      {/* Cab door window */}
+      <rect x="13" y="44" width="13" height="20" rx="2"
+        fill="#bfdbfe" opacity="0.55" stroke="#93c5fd" strokeWidth="0.8" />
 
-      {/* ── Wheels (top-down, darkened corners) ── */}
-      {/* Front-left */}
-      <rect x="31" y="46" width="16" height="34" rx="3" fill="#9ca3af" />
-      {/* Front-right */}
-      <rect x="153" y="46" width="16" height="34" rx="3" fill="#9ca3af" />
-      {/* Rear-left */}
-      <rect x="31" y="220" width="16" height="34" rx="3" fill="#9ca3af" />
-      {/* Rear-right */}
-      <rect x="153" y="220" width="16" height="34" rx="3" fill="#9ca3af" />
+      {/* Door handle */}
+      <rect x="14" y="82" width="7" height="2.5" rx="1.5" fill={dim} />
+
+      {/* ── Wheel wells (white arches over body bottom) ── */}
+      {/* Front */}
+      <path d="M 26 122 Q 26 104 50 104 Q 74 104 74 122"
+        fill="white" stroke={body} strokeWidth="1.5" />
+      {/* Rear */}
+      <path d="M 204 122 Q 204 104 228 104 Q 252 104 252 122"
+        fill="white" stroke={body} strokeWidth="1.5" />
+
+      {/* ── Ground line ── */}
+      <line x1="4" y1="159" x2="306" y2="159" stroke="#e5e7eb" strokeWidth="1.5" />
+
+      {/* ── Panel labels ── */}
+      <text
+        x="185" y="13"
+        textAnchor="middle" fontSize="7.5" fontWeight="700" letterSpacing="0.6"
+        fill={sideActive ? hi : dim} fontFamily="system-ui,sans-serif"
+      >
+        {activePanel === 1 ? "PASSENGER SIDE" : "DRIVER SIDE"}
+      </text>
+      <text
+        x="52" y="13"
+        textAnchor="middle" fontSize="7.5" fontWeight="700" letterSpacing="0.5"
+        fill={frontActive ? hi : dim} fontFamily="system-ui,sans-serif"
+      >FRONT</text>
+      <text
+        x="263" y="13"
+        textAnchor="middle" fontSize="7.5" fontWeight="700" letterSpacing="0.5"
+        fill={rearActive ? hi : dim} fontFamily="system-ui,sans-serif"
+      >REAR</text>
     </svg>
   );
 }

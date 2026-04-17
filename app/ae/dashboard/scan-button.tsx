@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 type Step = "idle" | "form" | "loading";
 
@@ -22,8 +23,6 @@ export default function ScanButton({ aeName }: { aeName: string }) {
     setStep("loading");
     setError(null);
     try {
-      // Phone is a placeholder — AE is on-site so no SMS is needed.
-      // The route returns 207 when SMS fails but still includes id + token.
       const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -50,27 +49,35 @@ export default function ScanButton({ aeName }: { aeName: string }) {
 
   if (step === "loading") {
     return (
-      <div
-        className="flex flex-col items-center justify-center gap-3 rounded-xl p-5"
-        style={{ backgroundColor: "#007BBA", minHeight: "120px" }}
-      >
-        <svg className="h-6 w-6 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm" style={{ minHeight: "140px" }}>
+        <svg className="h-6 w-6 animate-spin" style={{ color: "#007BBA" }} fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
         </svg>
-        <p className="text-sm font-medium text-white">Starting scan…</p>
+        <p className="text-sm font-medium text-gray-600">Starting scan…</p>
       </div>
     );
   }
 
   if (step === "form") {
     return (
-      <div className="flex flex-col gap-3 rounded-xl p-5" style={{ backgroundColor: "#007BBA" }}>
-        <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/20">
-            <CameraIcon className="h-5 w-5 text-white" />
-          </div>
-          <p className="font-semibold text-white">Scan a Vehicle</p>
+      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        {/* Logo + title */}
+        <div className="flex items-center gap-3 mb-1">
+          <Image
+            src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
+            alt="WrapSnap"
+            width={110}
+            height={32}
+            style={{ height: 32, width: "auto" }}
+            priority
+          />
+        </div>
+        <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+          <span style={{ color: "#007BBA" }}>
+            <CameraIcon className="h-4 w-4 shrink-0" />
+          </span>
+          <span>Scan a Vehicle</span>
         </div>
         <input
           type="text"
@@ -79,22 +86,23 @@ export default function ScanButton({ aeName }: { aeName: string }) {
           onKeyDown={(e) => { if (e.key === "Enter") handleStart(); }}
           placeholder='Vehicle description, e.g. "Route Van #3"'
           autoFocus
-          className="w-full rounded-lg bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2"
+          style={{ "--tw-ring-color": "#007BBA" } as React.CSSProperties}
         />
-        {error && <p className="text-xs text-red-200">{error}</p>}
+        {error && <p className="text-xs text-red-600">{error}</p>}
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => { setStep("idle"); setVehicleDesc(""); setError(null); }}
-            className="flex-1 rounded-lg border border-white/40 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+            className="flex-1 rounded-lg border border-gray-300 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleStart}
-            className="flex-1 rounded-lg bg-white py-2.5 text-sm font-semibold transition hover:opacity-90"
-            style={{ color: "#007BBA" }}
+            className="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+            style={{ backgroundColor: "#007BBA" }}
           >
             Start Scan
           </button>
@@ -105,21 +113,19 @@ export default function ScanButton({ aeName }: { aeName: string }) {
 
   // idle
   return (
-    <div className="flex flex-col">
-      <button
-        type="button"
-        onClick={() => setStep("form")}
-        className="flex flex-1 flex-col items-start gap-3 rounded-xl p-5 text-left transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2"
-        style={{ backgroundColor: "#007BBA" }}
-      >
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-          <CameraIcon className="h-5 w-5 text-white" />
-        </div>
-        <div>
-          <p className="font-semibold text-white">Scan a Vehicle</p>
-          <p className="mt-0.5 text-sm text-white/70">I&apos;m on site — take measurements myself</p>
-        </div>
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={() => setStep("form")}
+      className="flex flex-col items-start gap-3 rounded-xl p-5 text-left transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2"
+      style={{ backgroundColor: "#007BBA" }}
+    >
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
+        <CameraIcon className="h-5 w-5 text-white" />
+      </div>
+      <div>
+        <p className="font-semibold text-white">Scan a Vehicle</p>
+        <p className="mt-0.5 text-sm text-white/70">I&apos;m on site — take measurements myself</p>
+      </div>
+    </button>
   );
 }
