@@ -70,6 +70,23 @@ Bounding box rules:
 - For text zones, the box must encompass the entire text block — do not clip ascenders, descenders, or surrounding glow/shadow
 - When in doubt, draw a LARGER bounding box rather than a smaller one
 
+CRITICAL PRODUCTION RULE — BOUNDING BOXES MUST INCLUDE ALL INTERNAL WHITESPACE:
+
+In vinyl production, the printer outputs the ENTIRE rectangular bounding box of a graphic — including all internal white space, gaps between letters, and negative space within the design. The installer then weeds (removes) unwanted material. The COST and MATERIAL USAGE is based on the full rectangle, not just the colored/printed area.
+
+Therefore, bounding boxes MUST be drawn to the OUTER EXTENT of each graphic zone including all internal white space:
+
+CORRECT: 'IMPACT FIRE' text — draw one box from the leftmost edge of 'I' to the rightmost edge of 'E', full height including ascenders and descenders, including all letter spacing between words. The white gaps between letters are inside the box.
+WRONG: Drawing tight boxes that hug only the colored pixels, excluding white space between elements.
+
+CORRECT: A flame logo with a white halo or gradient fade — draw the box to include the full visual extent where the graphic exists, including the faded edges.
+WRONG: Drawing the box only around the fully opaque/saturated colored area.
+
+CORRECT: Multiple lines of text stacked (company name on top, phone number below) — one box encompassing ALL lines including the vertical space between them.
+WRONG: Separate boxes for each line of text.
+
+The square footage of each zone represents the MATERIAL that would be ordered, printed, and cut — not just the colored surface area.
+
 STEP 5 — PRODUCE JSON OUTPUT
 Return ONLY valid JSON — no markdown fences, no explanation, no trailing text:
 
