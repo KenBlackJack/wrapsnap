@@ -11,6 +11,7 @@ interface BBox {
 
 export interface VinylZone {
   type: "printed_wrap" | "cut_vinyl" | "review";
+  name?: string;
   sqft: number;
   bbox?: BBox;
 }
@@ -63,7 +64,8 @@ export default function AnnotatedPhoto({ imageUrl, zones, panelLabel }: Props) {
 
       ctx.fillStyle = style.stroke;
       ctx.font      = "bold 11px sans-serif";
-      ctx.fillText(`${style.label} · ${zone.sqft.toFixed(1)} sq ft`, x + 4, y + 14);
+      const zoneLabel = zone.name ?? style.label;
+      ctx.fillText(`${zoneLabel} · ${zone.sqft.toFixed(1)} sq ft`, x + 4, y + 14);
     }
   }, [annotatedZones]);
 
@@ -119,7 +121,8 @@ export default function AnnotatedPhoto({ imageUrl, zones, panelLabel }: Props) {
 
       ctx.fillStyle = style.stroke;
       ctx.font      = `bold ${Math.round(sw / 60)}px sans-serif`;
-      ctx.fillText(`${style.label} · ${zone.sqft.toFixed(1)} sq ft`, x + 6, y + Math.round(sw / 50));
+      const dlLabel = zone.name ?? style.label;
+      ctx.fillText(`${dlLabel} · ${zone.sqft.toFixed(1)} sq ft`, x + 6, y + Math.round(sw / 50));
     }
 
     let dataUrl: string;

@@ -36,11 +36,21 @@ If the measurements are within 5% of each other, use the average as a single pix
 
 If only one card is found, use it as the sole reference and set perspective_correction_applied: false.
 
-STEP 3 — VINYL DETECTION
-Identify every distinct graphic zone on the panel. Classify each zone as:
-- "printed_wrap" — large-format printed vinyl (full-color graphics, backgrounds, wraps)
-- "cut_vinyl" — individually cut vinyl letters, logos, or shapes
+STEP 3 — VINYL DETECTION AND ZONE GROUPING
+Do NOT draw individual boxes around each letter, word, or small graphic element. Group related visual elements into logical PRODUCTION ZONES that reflect how a printer would produce and install the work:
+
+- TEXT CLUSTERS: All text appearing together as a unit gets ONE bounding box. Company name, phone number, address, and tagline printed together = one zone named e.g. "Company name and contact info"
+- LOGO + TEXT: A logo and any text directly associated with it as a branded unit = ONE zone named e.g. "Flame logo with company name"
+- STRIPES AND BANDS: A color stripe or band running along the vehicle = ONE wide rectangular zone spanning its full length, named e.g. "Blue lower body stripe"
+- REAR PANEL: All graphics on a rear door panel = ONE zone encompassing all content, named e.g. "Rear door graphics"
+- FULL WRAPS: A background color or printed image covering most of the panel = ONE zone for the entire wrap area
+
+Classify each zone as:
+- "printed_wrap" — large-format printed vinyl (full-color graphics, backgrounds, wraps, gradients)
+- "cut_vinyl" — individually cut vinyl letters, logos, or shapes (single color, no print)
 - "review" — ambiguous areas needing human confirmation
+
+Give each zone a short descriptive name (e.g. "Blue lower stripe", "Company logo block", "Rear door graphics").
 
 STEP 4 — SQUARE FOOTAGE CALCULATION
 For each vinyl zone, measure pixel dimensions, convert to inches using the perspective-corrected pixels_per_inch for that zone's position, then add bleed:
@@ -54,6 +64,11 @@ Also estimate a bounding box for each vinyl zone as percentages of the image dim
 - y_pct: top edge of the zone / image height
 - width_pct: zone width / image width
 - height_pct: zone height / image height
+
+Bounding box rules:
+- Extend each box to capture the FULL visual extent of the graphic including any gradient transitions or fade edges
+- For text zones, the box must encompass the entire text block — do not clip ascenders, descenders, or surrounding glow/shadow
+- When in doubt, draw a LARGER bounding box rather than a smaller one
 
 STEP 5 — PRODUCE JSON OUTPUT
 Return ONLY valid JSON — no markdown fences, no explanation, no trailing text:
@@ -72,6 +87,7 @@ Return ONLY valid JSON — no markdown fences, no explanation, no trailing text:
       "coverage_type": "printed_wrap | cut_vinyl | mixed | none",
       "vinyl_zones": [
         {
+          "name": "<short descriptive zone name>",
           "type": "printed_wrap | cut_vinyl | review",
           "sqft": 0.0,
           "sqft_low": 0.0,

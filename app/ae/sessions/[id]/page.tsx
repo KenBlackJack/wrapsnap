@@ -40,13 +40,28 @@ function formatDateTime(iso: string) {
   });
 }
 
-interface PanelEstimate {
-  panel: string;
+interface VinylZoneEstimate {
+  type: "printed_wrap" | "cut_vinyl" | "review";
   name?: string;
   sqft: number;
   sqft_low: number;
   sqft_high: number;
-  vinyl_zones?: VinylZone[];
+}
+
+interface PanelEstimate {
+  panel: string;
+  name?: string;
+  coverage_type?: string;
+  panel_sqft?: number;
+  panel_sqft_low?: number;
+  panel_sqft_high?: number;
+  // legacy field names (kept for backwards compat with old estimates)
+  sqft?: number;
+  sqft_low?: number;
+  sqft_high?: number;
+  vinyl_zones?: VinylZoneEstimate[];
+  // annotated photo zones (separate type used by canvas overlay)
+  _vinyl_zones_raw?: VinylZone[];
 }
 
 export default async function SessionDetailPage({
@@ -279,28 +294,83 @@ export default async function SessionDetailPage({
             {Array.isArray(estimate.panels) && estimate.panels.length > 0 && (
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-2">Panel breakdown</p>
-                <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 overflow-hidden text-sm">
-                  {(estimate.panels as PanelEstimate[]).map((panel) => (
-                    <div key={panel.panel ?? panel.name} className="flex items-center justify-between px-4 py-2.5 bg-white">
-                      <span className="capitalize text-gray-700">{(panel.panel ?? panel.name)?.replace(/_/g, " ")}</span>
-                      <span className="font-medium text-gray-900">
-                        {panel.sqft != null ? `${panel.sqft.toFixed(1)} sq ft` : "—"}
-                        {panel.sqft_low != null && panel.sqft_high != null && (
-                          <span className="ml-1.5 text-xs text-gray-400">
-                            ({panel.sqft_low.toFixed(1)}–{panel.sqft_high.toFixed(1)})
+                <div className="rounded-lg border border-gray-200 overflow-hidden text-sm divide-y divide-gray-100">
+                  {(estimate.panels as PanelEstimate[]).map((panel) => {
+                    const slug = panel.panel ?? panel.name ?? "unknown";
+                    const label = slug.replace(/_/g, " ");
+                    // Support both new (panel_sqft) and old (sqft) field names
+                    const totalSqft = panel.panel_sqft ?? panel.sqft;
+                    const lowSqft   = panel.panel_sqft_low  ?? panel.sqft_low;
+                    const highSqft  = panel.panel_sqft_high ?? panel.sqft_high;
+                    const zones     = panel.vinyl_zones ?? [];
+
+                    return (
+                      <div key={slug} className="bg-white">
+                        {/* Panel header row */}
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="capitalize font-medium text-gray-900">{label}</span>
+                            {panel.coverage_type && panel.coverage_type !== "none" && (
+                              <span className="rounded-full px-2 py-0.5 text-[10px] font-medium bg-blue-50 text-blue-700 capitalize">
+                                {panel.coverage_type.replace(/_/g, " ")}
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-semibold text-gray-900 shrink-0">
+                            {totalSqft != null ? `${totalSqft.toFixed(1)} sq ft` : "—"}
+                            {lowSqft != null && highSqft != null && (
+                              <span className="ml-1.5 text-xs font-normal text-gray-400">
+                                ({lowSqft.toFixed(1)}–{highSqft.toFixed(1)})
+                              </span>
+                            )}
                           </span>
+                        </div>
+
+                        {/* Zone rows */}
+                        {zones.length > 0 && (
+                          <div className="border-t border-gray-50 bg-gray-50 divide-y divide-gray-100">
+                            {zones.map((zone, zi) => (
+                              <div key={zi} className="flex items-center justify-between px-4 py-1.5 pl-7">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span
+                                    className="shrink-0 h-2 w-2 rounded-sm"
+                                    style={{
+                                      background:
+                                        zone.type === "printed_wrap" ? "#3b82f6"
+                                        : zone.type === "cut_vinyl"  ? "#ef4444"
+                                        : "#eab308",
+                                    }}
+                                  />
+                                  <span className="text-gray-600 text-xs truncate">
+                                    {zone.name ?? zone.type.replace(/_/g, " ")}
+                                  </span>
+                                </div>
+                                <span className="text-gray-700 text-xs shrink-0 ml-3">
+                                  {zone.sqft != null ? `${zone.sqft.toFixed(1)} sq ft` : "—"}
+                                  {zone.sqft_low != null && zone.sqft_high != null && (
+                                    <span className="ml-1 text-gray-400">
+                                      ({zone.sqft_low.toFixed(1)}–{zone.sqft_high.toFixed(1)})
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         )}
-                      </span>
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {/* Confidence note */}
-            {estimate.confidence_note && (
-              <p className="text-xs text-gray-500 leading-relaxed">{estimate.confidence_note}</p>
-            )}
+            {/* Confidence note — always visible in gray box */}
+            <div className="rounded-lg bg-gray-50 border border-gray-100 px-4 py-3">
+              <p className="text-xs font-medium text-gray-500 mb-0.5">Notes</p>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                {estimate.confidence_note ?? "No additional notes."}
+              </p>
+            </div>
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center">
