@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,21 +19,30 @@ interface CapturedPhoto {
 
 // ─── Shared logo ─────────────────────────────────────────────────────────────
 
-function Logo() {
+function Logo({ size = "large" }: { size?: "large" | "small" }) {
+  if (size === "small") {
+    return (
+      <Image
+        src="/wrapsnap-logo.jpg"
+        alt="WrapSnap"
+        width={120}
+        height={32}
+        style={{ height: 32, width: "auto" }}
+        priority
+      />
+    );
+  }
   return (
-    <div className="flex items-center justify-center gap-2.5 mb-8">
-      <div
-        className="flex h-9 w-9 items-center justify-center rounded-lg"
-        style={{ backgroundColor: "#007BBA" }}
-      >
-        <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.25V18a2.25 2.25 0 002.25 2.25h13.5A2.25 2.25 0 0021 18V8.25m-18 0V6a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 6v2.25m-18 0h18M12 12.75h.008v.008H12v-.008z" />
-        </svg>
-      </div>
-      <div className="leading-tight text-left">
-        <p className="text-xl font-bold tracking-tight text-gray-900">WrapSnap</p>
-        <p className="text-[11px] font-medium" style={{ color: "#007BBA" }}>by Advertising Vehicles</p>
-      </div>
+    <div className="flex flex-col items-center mb-8">
+      <Image
+        src="/wrapsnap-logo.jpg"
+        alt="WrapSnap"
+        width={200}
+        height={56}
+        style={{ maxWidth: 200, width: "100%", height: "auto" }}
+        priority
+      />
+      <p className="mt-1.5 text-xs text-gray-400">by Advertising Vehicles</p>
     </div>
   );
 }
@@ -215,19 +225,21 @@ function Instructions({ onReady, onBack }: { onReady: () => void; onBack?: () =>
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col p-6">
       <div className="w-full max-w-sm mx-auto flex flex-col flex-1">
-        {onBack && (
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center gap-1.5 self-start mb-4 text-sm font-medium text-gray-500 hover:text-gray-700 transition"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-            </svg>
-            Back to session
-          </button>
-        )}
-        <Logo />
+        <div className="flex items-center justify-between mb-6">
+          <Logo size="small" />
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+              </svg>
+              Back
+            </button>
+          )}
+        </div>
         <h1 className="text-2xl font-semibold text-gray-900 text-center mb-1">
           Before you start
         </h1>

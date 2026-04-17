@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getSupabaseClient } from "@/lib/supabase";
@@ -123,28 +124,28 @@ export default async function SessionDetailPage({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header style={{ backgroundColor: "#004876" }}>
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center gap-3">
+          <div className="flex h-16 items-center gap-4">
             <Link
               href="/ae/dashboard"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-white/70 transition hover:bg-white/10"
               aria-label="Back to dashboard"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
               </svg>
             </Link>
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ backgroundColor: "#007BBA" }}>
-                <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.25V18a2.25 2.25 0 002.25 2.25h13.5A2.25 2.25 0 0021 18V8.25m-18 0V6a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 6v2.25m-18 0h18M12 12.75h.008v.008H12v-.008z" />
-                </svg>
-              </div>
-              <div className="leading-tight">
-                <p className="text-lg font-bold tracking-tight text-gray-900">WrapSnap</p>
-                <p className="text-[11px] font-medium" style={{ color: "#007BBA" }}>by Advertising Vehicles</p>
-              </div>
+            <div className="flex flex-col justify-center">
+              <Image
+                src="/wrapsnap-logo.jpg"
+                alt="WrapSnap"
+                width={140}
+                height={36}
+                style={{ height: 36, width: "auto" }}
+                priority
+              />
+              <p className="text-[11px] text-white/60 mt-0.5">Powered by Advertising Vehicles</p>
             </div>
           </div>
         </div>
