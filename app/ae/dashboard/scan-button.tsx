@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 type Step = "idle" | "form" | "loading";
 
@@ -62,17 +61,6 @@ export default function ScanButton({ aeName }: { aeName: string }) {
   if (step === "form") {
     return (
       <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        {/* Logo + title */}
-        <div className="flex items-center gap-3 mb-1">
-          <Image
-            src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
-            alt="WrapSnap"
-            width={110}
-            height={32}
-            style={{ height: 32, width: "auto" }}
-            priority
-          />
-        </div>
         <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
           <span style={{ color: "#007BBA" }}>
             <CameraIcon className="h-4 w-4 shrink-0" />

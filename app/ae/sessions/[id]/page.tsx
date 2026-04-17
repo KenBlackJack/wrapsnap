@@ -141,7 +141,7 @@ export default async function SessionDetailPage({
               <Image
                 src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
                 alt="WrapSnap"
-                width={140}
+                width={108}
                 height={36}
                 style={{ height: 36, width: "auto", mixBlendMode: "multiply" }}
                 priority
