@@ -61,7 +61,7 @@ export default function NewSessionPage() {
 
             <div className="flex flex-col justify-center">
               <Image
-                src="/wrapsnap-logo.jpg"
+                src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
                 alt="WrapSnap"
                 width={140}
                 height={36}

@@ -9,7 +9,7 @@ export default function LoginPage() {
         {/* WrapSnap logo */}
         <div className="flex flex-col items-center mb-8">
           <Image
-            src="/wrapsnap-logo.jpg"
+            src="/images/WrapSnap_Logo_Horizontal_LG.jpg"
             alt="WrapSnap"
             width={280}
             height={80}

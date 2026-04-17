@@ -76,7 +76,7 @@ export default async function DashboardPage() {
           <div className="flex h-16 items-center justify-between">
             <div className="flex flex-col justify-center">
               <Image
-                src="/wrapsnap-logo.jpg"
+                src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
                 alt="WrapSnap"
                 width={160}
                 height={40}

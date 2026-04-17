@@ -23,7 +23,7 @@ function Logo({ size = "large" }: { size?: "large" | "small" }) {
   if (size === "small") {
     return (
       <Image
-        src="/wrapsnap-logo.jpg"
+        src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
         alt="WrapSnap"
         width={120}
         height={32}
@@ -35,7 +35,7 @@ function Logo({ size = "large" }: { size?: "large" | "small" }) {
   return (
     <div className="flex flex-col items-center mb-8">
       <Image
-        src="/wrapsnap-logo.jpg"
+        src="/images/WrapSnap_Logo_Horizontal_LG.jpg"
         alt="WrapSnap"
         width={200}
         height={56}
