@@ -143,7 +143,7 @@ export default async function SessionDetailPage({
                 alt="WrapSnap"
                 width={140}
                 height={36}
-                style={{ height: 36, width: "auto" }}
+                style={{ height: 36, width: "auto", mixBlendMode: "multiply" }}
                 priority
               />
               <p className="text-[11px] mt-0.5" style={{ color: "#004876" }}>Powered by Advertising Vehicles</p>

@@ -19,33 +19,41 @@ interface CapturedPhoto {
 
 // ─── Shared logo ─────────────────────────────────────────────────────────────
 
-function Logo({ size = "large" }: { size?: "large" | "small" }) {
+function Logo({ size = "large" }: { size?: "large" | "small" | "capture" }) {
   if (size === "small") {
     return (
-      <div className="bg-white rounded">
-        <Image
-          src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
-          alt="WrapSnap"
-          width={110}
-          height={28}
-          style={{ height: 28, width: "auto", display: "block" }}
-          priority
-        />
-      </div>
+      <Image
+        src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
+        alt="WrapSnap"
+        width={110}
+        height={28}
+        style={{ height: 28, width: "auto", display: "block", mixBlendMode: "multiply" }}
+        priority
+      />
+    );
+  }
+  if (size === "capture") {
+    return (
+      <Image
+        src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
+        alt="WrapSnap"
+        width={130}
+        height={36}
+        style={{ height: 36, width: "auto", display: "block", mixBlendMode: "multiply" }}
+        priority
+      />
     );
   }
   return (
     <div className="flex flex-col items-center mb-6">
-      <div className="bg-white rounded">
-        <Image
-          src="/images/WrapSnap_Logo_Horizontal_LG.jpg"
-          alt="WrapSnap"
-          width={200}
-          height={56}
-          style={{ maxWidth: 200, width: "100%", height: "auto", display: "block" }}
-          priority
-        />
-      </div>
+      <Image
+        src="/images/WrapSnap_Logo_Horizontal_LG.jpg"
+        alt="WrapSnap"
+        width={200}
+        height={56}
+        style={{ maxWidth: 200, width: "100%", height: "auto", display: "block", mixBlendMode: "multiply" }}
+        priority
+      />
       <p className="mt-1.5 text-xs text-gray-400">by Advertising Vehicles</p>
     </div>
   );
@@ -211,7 +219,7 @@ const INSTRUCTIONS = [
       </svg>
     ),
     title: "Step back",
-    body: "Make sure the full panel is visible with both cards clearly in frame.",
+    body: "Capture the entire vehicle panel from the most straight-on angle possible. Do not zoom in. Do not crop the vehicle. Both reference cards must be fully visible in the frame.",
   },
   {
     icon: (
@@ -289,131 +297,133 @@ function Instructions({ onReady, onBack }: { onReady: () => void; onBack?: () =>
   );
 }
 
-// ─── Vehicle diagram SVG (side-profile cargo van) ────────────────────────────
-// Panel order: 0=Driver Side, 1=Passenger Side, 2=Front, 3=Rear
-// Van faces right: front on left, rear on right.
+// ─── Vehicle diagram SVGs — one per panel ────────────────────────────────────
 
-function VehicleDiagram({ activePanel }: { activePanel: number }) {
-  const hi      = "#007BBA";
-  const hiLight = "#dbeafe";
-  const body    = "#374151";
-  const dim     = "#9ca3af";
+const HI      = "#007BBA";
+const HI_FILL = "#dbeafe";
+const BODY_C  = "#374151";
+const DIM     = "#9ca3af";
 
-  const sideActive  = activePanel === 0 || activePanel === 1;
-  const frontActive = activePanel === 2;
-  const rearActive  = activePanel === 3;
-
-  // Geometry constants
-  // Cab: x=12..92  Cargo: x=92..278  Rear doors: x=248..278
-  // Body: y=22 (top) .. y=122 (bottom)
-  // Wheels: cy=142, r=17  Front cx=50  Rear cx=228
-
+// Side profile (driver side faces right; passenger side is mirrored)
+function VehicleDiagramSide({ mirrored }: { mirrored: boolean }) {
   const cabPath   = "M 12 122 L 12 90 L 20 78 L 56 78 L 72 22 L 92 22 L 92 122 Z";
-  // Windshield glass polygon (inside cab outline)
   const glassPath = "M 22 76 L 58 76 L 72 26 L 90 26 L 90 60 L 36 76 Z";
-
+  const label     = mirrored ? "PASSENGER SIDE" : "DRIVER SIDE";
   return (
-    <svg viewBox="0 0 310 175" className="w-full max-w-[280px] mx-auto" aria-hidden="true">
-
-      {/* ── Wheels (behind body) ── */}
+    <svg
+      viewBox="0 0 310 175"
+      className="w-full max-w-[280px] mx-auto"
+      style={mirrored ? { transform: "scaleX(-1)" } : undefined}
+      aria-hidden="true"
+    >
+      {/* Wheels */}
       <circle cx="50"  cy="142" r="17" fill="#1f2937" />
       <circle cx="50"  cy="142" r="10" fill="#374151" />
-      <circle cx="50"  cy="142" r="3.5" fill="#9ca3af" />
+      <circle cx="50"  cy="142" r="3.5" fill={DIM} />
       <circle cx="228" cy="142" r="17" fill="#1f2937" />
       <circle cx="228" cy="142" r="10" fill="#374151" />
-      <circle cx="228" cy="142" r="3.5" fill="#9ca3af" />
-
-      {/* ── Highlight fills (behind body strokes) ── */}
-      {sideActive && (
-        <rect x="92" y="22" width="186" height="100" fill={hiLight} />
-      )}
-      {frontActive && (
-        <path d={cabPath} fill={hiLight} />
-      )}
-      {rearActive && (
-        <rect x="248" y="22" width="30" height="100" fill={hiLight} />
-      )}
-
-      {/* ── Cargo body ── */}
-      <rect
-        x="92" y="22" width="186" height="100" rx="2"
-        fill="white"
-        stroke={sideActive ? hi : body}
-        strokeWidth={sideActive ? 2.5 : 1.5}
-      />
-
-      {/* Rear door split line */}
-      <line
-        x1="248" y1="22" x2="248" y2="122"
-        stroke={rearActive ? hi : dim}
-        strokeWidth={rearActive ? 2.5 : 1}
-        strokeDasharray={rearActive ? undefined : "4 3"}
-      />
-      {/* Rear face border (shown when rear active) */}
-      {rearActive && (
-        <rect x="248" y="22" width="30" height="100"
-          fill="none" stroke={hi} strokeWidth="2.5" rx="1" />
-      )}
-
-      {/* Rear door handle */}
-      <circle cx="254" cy="72" r="2" fill={dim} />
-
-      {/* Cargo panel line (horizontal centre) */}
-      <line x1="92" y1="72" x2="248" y2="72"
-        stroke="#e5e7eb" strokeWidth="1" strokeDasharray="5 4" />
-
-      {/* ── Cab section ── */}
-      <path
-        d={cabPath}
-        fill="white"
-        stroke={frontActive ? hi : body}
-        strokeWidth={frontActive ? 2.5 : 1.5}
-        strokeLinejoin="round"
-      />
-
-      {/* Windshield glass */}
-      <path d={glassPath}
-        fill="#bfdbfe" opacity="0.55"
-        stroke="#93c5fd" strokeWidth="0.8" />
-
-      {/* Cab door window */}
-      <rect x="13" y="44" width="13" height="20" rx="2"
-        fill="#bfdbfe" opacity="0.55" stroke="#93c5fd" strokeWidth="0.8" />
-
-      {/* Door handle */}
-      <rect x="14" y="82" width="7" height="2.5" rx="1.5" fill={dim} />
-
-      {/* ── Wheel wells (white arches over body bottom) ── */}
-      {/* Front */}
-      <path d="M 26 122 Q 26 104 50 104 Q 74 104 74 122"
-        fill="white" stroke={body} strokeWidth="1.5" />
-      {/* Rear */}
-      <path d="M 204 122 Q 204 104 228 104 Q 252 104 252 122"
-        fill="white" stroke={body} strokeWidth="1.5" />
-
-      {/* ── Ground line ── */}
+      <circle cx="228" cy="142" r="3.5" fill={DIM} />
+      {/* Cargo highlight */}
+      <rect x="92" y="22" width="156" height="100" fill={HI_FILL} />
+      {/* Cargo body */}
+      <rect x="92" y="22" width="186" height="100" rx="2" fill="white" stroke={HI} strokeWidth="2.5" />
+      {/* Rear door split */}
+      <line x1="248" y1="22" x2="248" y2="122" stroke={DIM} strokeWidth="1" strokeDasharray="4 3" />
+      <circle cx="254" cy="72" r="2" fill={DIM} />
+      {/* Cargo centre line */}
+      <line x1="92" y1="72" x2="248" y2="72" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="5 4" />
+      {/* Cab */}
+      <path d={cabPath} fill="white" stroke={BODY_C} strokeWidth="1.5" strokeLinejoin="round" />
+      <path d={glassPath} fill="#bfdbfe" opacity="0.55" stroke="#93c5fd" strokeWidth="0.8" />
+      <rect x="13" y="44" width="13" height="20" rx="2" fill="#bfdbfe" opacity="0.55" stroke="#93c5fd" strokeWidth="0.8" />
+      <rect x="14" y="82" width="7" height="2.5" rx="1.5" fill={DIM} />
+      {/* Wheel wells */}
+      <path d="M 26 122 Q 26 104 50 104 Q 74 104 74 122" fill="white" stroke={BODY_C} strokeWidth="1.5" />
+      <path d="M 204 122 Q 204 104 228 104 Q 252 104 252 122" fill="white" stroke={BODY_C} strokeWidth="1.5" />
+      {/* Ground */}
       <line x1="4" y1="159" x2="306" y2="159" stroke="#e5e7eb" strokeWidth="1.5" />
-
-      {/* ── Panel labels ── */}
+      {/* Label (un-mirror it so text reads correctly) */}
       <text
         x="185" y="13"
         textAnchor="middle" fontSize="7.5" fontWeight="700" letterSpacing="0.6"
-        fill={sideActive ? hi : dim} fontFamily="system-ui,sans-serif"
-      >
-        {activePanel === 1 ? "PASSENGER SIDE" : "DRIVER SIDE"}
-      </text>
-      <text
-        x="52" y="13"
-        textAnchor="middle" fontSize="7.5" fontWeight="700" letterSpacing="0.5"
-        fill={frontActive ? hi : dim} fontFamily="system-ui,sans-serif"
-      >FRONT</text>
-      <text
-        x="263" y="13"
-        textAnchor="middle" fontSize="7.5" fontWeight="700" letterSpacing="0.5"
-        fill={rearActive ? hi : dim} fontFamily="system-ui,sans-serif"
-      >REAR</text>
+        fill={HI} fontFamily="system-ui,sans-serif"
+        style={mirrored ? { transform: "scaleX(-1)", transformOrigin: "185px 13px" } : undefined}
+      >{label}</text>
     </svg>
   );
+}
+
+// Front-facing view
+function VehicleDiagramFront() {
+  return (
+    <svg viewBox="0 0 220 175" className="w-full max-w-[220px] mx-auto" aria-hidden="true">
+      {/* Ground */}
+      <line x1="4" y1="165" x2="216" y2="165" stroke="#e5e7eb" strokeWidth="1.5" />
+      {/* Wheels (ellipses, front view) */}
+      <ellipse cx="42" cy="155" rx="28" ry="11" fill="#1f2937" />
+      <ellipse cx="42" cy="155" rx="17" ry="6.5" fill="#374151" />
+      <ellipse cx="178" cy="155" rx="28" ry="11" fill="#1f2937" />
+      <ellipse cx="178" cy="155" rx="17" ry="6.5" fill="#374151" />
+      {/* Front face highlight */}
+      <rect x="58" y="22" width="104" height="122" rx="5" fill={HI_FILL} stroke={HI} strokeWidth="2.5" />
+      {/* Windshield */}
+      <rect x="67" y="28" width="86" height="56" rx="3" fill="#bfdbfe" opacity="0.75" stroke="#93c5fd" strokeWidth="1" />
+      {/* A-pillars */}
+      <rect x="58" y="28" width="10" height="56" rx="2" fill="white" stroke={HI} strokeWidth="1.5" />
+      <rect x="152" y="28" width="10" height="56" rx="2" fill="white" stroke={HI} strokeWidth="1.5" />
+      {/* Headlights */}
+      <rect x="60" y="106" width="26" height="14" rx="2" fill="#fef3c7" stroke="#d97706" strokeWidth="1" />
+      <rect x="134" y="106" width="26" height="14" rx="2" fill="#fef3c7" stroke="#d97706" strokeWidth="1" />
+      {/* Grille */}
+      <rect x="88" y="103" width="44" height="28" rx="3" fill="#111827" />
+      <line x1="88" y1="112" x2="132" y2="112" stroke="#374151" strokeWidth="1" />
+      <line x1="88" y1="121" x2="132" y2="121" stroke="#374151" strokeWidth="1" />
+      {/* Bumper */}
+      <rect x="54" y="138" width="112" height="8" rx="3" fill={DIM} />
+      {/* Label */}
+      <text x="110" y="14" textAnchor="middle" fontSize="8" fontWeight="700" letterSpacing="0.6" fill={HI} fontFamily="system-ui,sans-serif">FRONT</text>
+    </svg>
+  );
+}
+
+// Rear-facing view
+function VehicleDiagramRear() {
+  return (
+    <svg viewBox="0 0 220 175" className="w-full max-w-[220px] mx-auto" aria-hidden="true">
+      {/* Ground */}
+      <line x1="4" y1="165" x2="216" y2="165" stroke="#e5e7eb" strokeWidth="1.5" />
+      {/* Wheels */}
+      <ellipse cx="42" cy="155" rx="28" ry="11" fill="#1f2937" />
+      <ellipse cx="42" cy="155" rx="17" ry="6.5" fill="#374151" />
+      <ellipse cx="178" cy="155" rx="28" ry="11" fill="#1f2937" />
+      <ellipse cx="178" cy="155" rx="17" ry="6.5" fill="#374151" />
+      {/* Rear doors highlight */}
+      <rect x="46" y="18" width="128" height="126" rx="5" fill={HI_FILL} stroke={HI} strokeWidth="2.5" />
+      {/* Center split */}
+      <line x1="110" y1="18" x2="110" y2="144" stroke={HI} strokeWidth="2" strokeDasharray="6 3" />
+      {/* Taillights */}
+      <rect x="48" y="26" width="22" height="36" rx="2" fill="#fca5a5" opacity="0.85" stroke="#ef4444" strokeWidth="1" />
+      <rect x="150" y="26" width="22" height="36" rx="2" fill="#fca5a5" opacity="0.85" stroke="#ef4444" strokeWidth="1" />
+      {/* Door handles */}
+      <rect x="84" y="76" width="20" height="5" rx="2.5" fill={DIM} />
+      <rect x="116" y="76" width="20" height="5" rx="2.5" fill={DIM} />
+      {/* Hinges */}
+      <circle cx="48" cy="42" r="3" fill={DIM} />
+      <circle cx="48" cy="116" r="3" fill={DIM} />
+      <circle cx="172" cy="42" r="3" fill={DIM} />
+      <circle cx="172" cy="116" r="3" fill={DIM} />
+      {/* Bumper */}
+      <rect x="40" y="140" width="140" height="9" rx="3" fill={DIM} />
+      {/* Label */}
+      <text x="110" y="11" textAnchor="middle" fontSize="8" fontWeight="700" letterSpacing="0.6" fill={HI} fontFamily="system-ui,sans-serif">REAR</text>
+    </svg>
+  );
+}
+
+function VehicleDiagram({ activePanel }: { activePanel: number }) {
+  if (activePanel === 2) return <VehicleDiagramFront />;
+  if (activePanel === 3) return <VehicleDiagramRear />;
+  return <VehicleDiagramSide mirrored={activePanel === 1} />;
 }
 
 // ─── STATE 3: Photo capture ───────────────────────────────────────────────────
@@ -535,6 +545,11 @@ function PhotoCapture({
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col p-6">
       <div className="w-full max-w-sm mx-auto flex flex-col flex-1">
+        {/* Logo */}
+        <div className="flex justify-center mb-4 pt-1">
+          <Logo size="capture" />
+        </div>
+
         {/* Progress */}
         <div className="flex gap-2 justify-center mb-6 pt-2">
           {PANELS.map((_, i) => (
@@ -647,6 +662,13 @@ function PhotoCapture({
               <p className="text-xs text-gray-400 text-center px-4">
                 Make sure the reference card and the full {panel.toLowerCase()} are visible.
               </p>
+              <button
+                type="button"
+                onClick={handleSkipAndContinue}
+                className="text-xs text-gray-400 underline underline-offset-2 hover:text-gray-600 transition mt-1"
+              >
+                Skip — no graphics on this side
+              </button>
             </div>
           )}
         </div>

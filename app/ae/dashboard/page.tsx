@@ -81,7 +81,7 @@ export default async function DashboardPage() {
                 alt="WrapSnap"
                 width={160}
                 height={40}
-                style={{ height: 40, width: "auto" }}
+                style={{ height: 40, width: "auto", mixBlendMode: "multiply" }}
                 priority
               />
               <p className="text-[11px] mt-0.5" style={{ color: "#004876" }}>Powered by Advertising Vehicles</p>
