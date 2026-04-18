@@ -9,12 +9,12 @@ import ScanButton from "./scan-button";
 
 export const dynamic = "force-dynamic";
 
-type SessionStatus = "pending" | "active" | "complete" | "expired";
+type SessionStatus = "pending" | "active" | "complete" | "expired" | "archived";
 
 interface WrapSession {
   id: string;
   client_name: string;
-  client_phone: string;
+  vehicle_description: string | null;
   status: SessionStatus;
   created_at: string;
 }
@@ -24,6 +24,7 @@ const STATUS_STYLES: Record<SessionStatus, string> = {
   active:   "bg-blue-100 text-blue-700",
   complete: "bg-green-100 text-green-700",
   expired:  "bg-red-100 text-red-700",
+  archived: "bg-gray-100 text-gray-500",
 };
 
 function StatusPill({ status }: { status: SessionStatus }) {
@@ -32,15 +33,6 @@ function StatusPill({ status }: { status: SessionStatus }) {
       {status}
     </span>
   );
-}
-
-function formatPhone(phone: string | null | undefined): string | null {
-  if (!phone) return null;
-  const digits = phone.replace(/\D/g, "");
-  if (digits === "0000000000" || digits === "") return null;
-  if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-  if (digits.length === 11 && digits[0] === "1") return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
-  return phone;
 }
 
 function formatDate(iso: string) {
@@ -61,10 +53,30 @@ export default async function DashboardPage() {
   const userEmail = session.user.email ?? "";
   const userName = session.user.name ?? (userEmail || "AE");
 
-  const { data: wrapSessions } = await getSupabaseClient()
+  // Issue 1 — confirmed: sessions are already filtered by created_by
+  console.log("Dashboard: loading sessions for", userEmail);
+
+  const supabase = getSupabaseClient();
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Issue 3 — auto-archive: mark sessions older than 30 days as archived
+  const { error: archiveError } = await supabase
     .from("sessions")
-    .select("id, client_name, client_phone, status, created_at")
+    .update({ status: "archived" })
     .eq("created_by", userEmail)
+    .neq("status", "archived")
+    .lt("created_at", thirtyDaysAgo);
+
+  if (archiveError) {
+    console.error("Dashboard: auto-archive error", archiveError.message);
+  }
+
+  // Issue 3 — query: show sessions within the last 30 days OR not archived
+  const { data: wrapSessions } = await supabase
+    .from("sessions")
+    .select("id, client_name, vehicle_description, status, created_at")
+    .eq("created_by", userEmail)
+    .or(`created_at.gte.${thirtyDaysAgo},status.neq.archived`)
     .order("created_at", { ascending: false });
 
   const sessions: WrapSession[] = wrapSessions ?? [];
@@ -136,14 +148,15 @@ export default async function DashboardPage() {
           <ul className="space-y-3">
             {sessions.map((s) => (
               <li key={s.id} className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+                {/* Issue 2 — card layout: name → vehicle → status + date */}
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate font-medium text-gray-900">{s.client_name}</p>
+                  <p className="truncate text-lg font-bold text-gray-900">{s.client_name}</p>
+                  {s.vehicle_description && (
+                    <p className="truncate text-sm text-gray-500 mt-0.5">{s.vehicle_description}</p>
+                  )}
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
                     <StatusPill status={s.status} />
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-gray-500">
-                    {formatPhone(s.client_phone) && <span>{formatPhone(s.client_phone)}</span>}
-                    <span>{formatDate(s.created_at)}</span>
+                    <span className="text-xs text-gray-400">{formatDate(s.created_at)}</span>
                   </div>
                 </div>
                 <Link
@@ -156,6 +169,16 @@ export default async function DashboardPage() {
             ))}
           </ul>
         )}
+
+        {/* Issue 3 — archive link */}
+        <div className="mt-6 text-center">
+          <Link
+            href="/ae/sessions/archive"
+            className="text-sm text-gray-400 hover:text-gray-600 transition"
+          >
+            View archived sessions →
+          </Link>
+        </div>
       </main>
     </div>
   );

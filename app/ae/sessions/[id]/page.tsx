@@ -10,13 +10,14 @@ import AnnotatedPhoto, { type VinylZone } from "./annotated-photo";
 
 export const dynamic = "force-dynamic";
 
-type SessionStatus = "pending" | "active" | "complete" | "expired";
+type SessionStatus = "pending" | "active" | "complete" | "expired" | "archived";
 
 const STATUS_STYLES: Record<SessionStatus, string> = {
   pending:  "bg-gray-100 text-gray-600",
   active:   "bg-blue-100 text-blue-700",
   complete: "bg-green-100 text-green-700",
   expired:  "bg-red-100 text-red-700",
+  archived: "bg-gray-100 text-gray-500",
 };
 
 const PANELS = [
@@ -80,7 +81,7 @@ export default async function SessionDetailPage({
   // Fetch session — must be owned by this AE
   const { data: session, error } = await supabase
     .from("sessions")
-    .select("id, token, client_name, client_phone, status, created_at, expires_at, created_by")
+    .select("id, token, client_name, client_phone, vehicle_description, status, created_at, expires_at, created_by")
     .eq("id", id)
     .single();
 
@@ -136,6 +137,20 @@ export default async function SessionDetailPage({
   const scanUrl = `https://wrapsnap.advertisingvehicles.com/scan/${session.token}`;
   const status = session.status as SessionStatus;
 
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const isOldSession = new Date(session.created_at) < thirtyDaysAgo;
+  const canArchive = isOldSession && status !== "archived";
+
+  async function archiveSession() {
+    "use server";
+    const supabaseServer = getSupabaseClient();
+    await supabaseServer
+      .from("sessions")
+      .update({ status: "archived" })
+      .eq("id", id);
+    redirect("/ae/dashboard");
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -173,8 +188,11 @@ export default async function SessionDetailPage({
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900">{session.client_name}</h1>
-              <p className="mt-0.5 text-sm text-gray-500">{formatPhone(session.client_phone)}</p>
+              <h1 className="text-2xl font-bold text-gray-900">{session.client_name}</h1>
+              {session.vehicle_description && (
+                <p className="mt-0.5 text-sm text-gray-500">{session.vehicle_description}</p>
+              )}
+              <p className="mt-0.5 text-sm text-gray-400">{formatPhone(session.client_phone)}</p>
             </div>
             <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium capitalize ${STATUS_STYLES[status]}`}>
               {status}
@@ -191,6 +209,20 @@ export default async function SessionDetailPage({
               <dd className="mt-0.5 text-gray-900">{formatDateTime(session.expires_at)}</dd>
             </div>
           </dl>
+
+          {/* Archive button — only for sessions older than 30 days */}
+          {canArchive && (
+            <div className="mt-5 pt-5 border-t border-gray-100">
+              <form action={archiveSession}>
+                <button
+                  type="submit"
+                  className="text-sm text-gray-400 hover:text-gray-600 transition underline underline-offset-2"
+                >
+                  Archive this session
+                </button>
+              </form>
+            </div>
+          )}
         </div>
 
         {/* Scan link + PIN */}
