@@ -20,6 +20,25 @@ interface Props {
   imageUrl: string;
   zones: VinylZone[];
   panelLabel: string;
+  onOpen?: () => void;
+}
+
+function drawZoneLabel(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, fontSize: number) {
+  ctx.font = `bold ${fontSize}px sans-serif`;
+  const tw = ctx.measureText(text).width;
+  const pad = 4;
+  const bh = fontSize + 7;
+  // Background
+  ctx.fillStyle = "rgba(0,0,0,0.6)";
+  ctx.fillRect(x - pad, y - fontSize, tw + pad * 2, bh);
+  // Stroke for extra legibility
+  ctx.strokeStyle = "rgba(0,0,0,0.8)";
+  ctx.lineWidth = 3;
+  ctx.lineJoin = "round";
+  ctx.strokeText(text, x, y);
+  // White fill
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(text, x, y);
 }
 
 const ZONE_STYLE = {
@@ -28,7 +47,7 @@ const ZONE_STYLE = {
   review:       { fill: "rgba(234, 179, 8, 0.20)",  stroke: "#eab308", label: "Review" },
 } as const;
 
-export default function AnnotatedPhoto({ imageUrl, zones, panelLabel }: Props) {
+export default function AnnotatedPhoto({ imageUrl, zones, panelLabel, onOpen }: Props) {
   const imgRef    = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -62,10 +81,9 @@ export default function AnnotatedPhoto({ imageUrl, zones, panelLabel }: Props) {
       ctx.lineWidth   = 2;
       ctx.strokeRect(x, y, bw, bh);
 
-      ctx.fillStyle = style.stroke;
-      ctx.font      = "bold 11px sans-serif";
       const zoneLabel = zone.name ?? style.label;
-      ctx.fillText(`${zoneLabel} · ${zone.sqft.toFixed(1)} sq ft`, x + 4, y + 14);
+      const labelText = `${zoneLabel} · ${zone.sqft.toFixed(1)} sq ft`;
+      drawZoneLabel(ctx, labelText, x + 4, y + 14, 11);
     }
   }, [annotatedZones]);
 
@@ -119,10 +137,9 @@ export default function AnnotatedPhoto({ imageUrl, zones, panelLabel }: Props) {
       ctx.lineWidth   = Math.max(2, sw / 500);
       ctx.strokeRect(x, y, bw, bh);
 
-      ctx.fillStyle = style.stroke;
-      ctx.font      = `bold ${Math.round(sw / 60)}px sans-serif`;
       const dlLabel = zone.name ?? style.label;
-      ctx.fillText(`${dlLabel} · ${zone.sqft.toFixed(1)} sq ft`, x + 6, y + Math.round(sw / 50));
+      const dlLabelText = `${dlLabel} · ${zone.sqft.toFixed(1)} sq ft`;
+      drawZoneLabel(ctx, dlLabelText, x + 6, y + Math.round(sw / 50), Math.round(sw / 60));
     }
 
     let dataUrl: string;
@@ -141,7 +158,10 @@ export default function AnnotatedPhoto({ imageUrl, zones, panelLabel }: Props) {
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+      <div
+        className={`relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 border border-gray-200${onOpen ? " cursor-zoom-in" : ""}`}
+        onClick={onOpen}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           ref={imgRef}
@@ -160,7 +180,7 @@ export default function AnnotatedPhoto({ imageUrl, zones, panelLabel }: Props) {
           <p className="text-white text-xs font-medium">{panelLabel}</p>
           {annotatedZones.length > 0 && (
             <button
-              onClick={handleDownload}
+              onClick={(e) => { e.stopPropagation(); handleDownload(); }}
               className="flex items-center gap-1 text-white/80 hover:text-white text-[10px] transition"
               title="Download annotated photo"
             >

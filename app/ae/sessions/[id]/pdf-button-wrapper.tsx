@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { PanelPDF } from "@/components/EstimatePDF";
+import type { VinylZone } from "./annotated-photo";
 
 const DownloadPDFButton = dynamic(() => import("./download-pdf-button"), {
   ssr: false,
@@ -32,6 +33,7 @@ interface PdfButtonWrapperProps {
   confidenceNote?: string | null;
   panels: PanelPDF[];
   photosByPanel?: Record<string, string> | null;
+  zonesByPanel?: Record<string, VinylZone[]> | null;
 }
 
 export default function PdfButtonWrapper(props: PdfButtonWrapperProps) {

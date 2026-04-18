@@ -5,8 +5,10 @@ import { authOptions } from "@/lib/auth";
 import { getSupabaseClient } from "@/lib/supabase";
 import CopyLink from "./copy-link";
 import PinReveal from "./pin-reveal";
-import AnnotatedPhoto, { type VinylZone } from "./annotated-photo";
+import { type VinylZone } from "./annotated-photo";
 import PdfButtonWrapper from "./pdf-button-wrapper";
+import PhotoGrid from "./photo-grid";
+import type { PhotoPanel } from "./photo-grid";
 
 export const dynamic = "force-dynamic";
 
@@ -282,30 +284,14 @@ export default async function SessionDetailPage({
         {/* Panel photos */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="text-base font-semibold text-gray-900 mb-4">Panel Photos</h2>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            {PANELS.map(({ slug, label }) => {
-              const signedUrl = uploadsBySlug[slug];
-              return (
-                <div key={slug}>
-                  {signedUrl ? (
-                    <AnnotatedPhoto
-                      imageUrl={signedUrl}
-                      zones={zonesByPanel[slug] ?? []}
-                      panelLabel={label}
-                    />
-                  ) : (
-                    <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 border border-gray-200 flex flex-col items-center justify-center gap-2 p-4 text-center">
-                      <svg className="h-7 w-7 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 3h18M3 3v18M3 3l18 18" />
-                      </svg>
-                      <p className="text-xs font-medium text-gray-400">{label}</p>
-                      <p className="text-[10px] text-gray-300">Not yet uploaded</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <PhotoGrid
+            panels={PANELS.map(({ slug, label }): PhotoPanel => ({
+              slug,
+              label,
+              imageUrl: uploadsBySlug[slug] ?? null,
+              zones: zonesByPanel[slug] ?? [],
+            }))}
+          />
         </div>
 
         {/* Estimate */}
@@ -337,6 +323,7 @@ export default async function SessionDetailPage({
                   confidenceNote={estimate.confidence_note}
                   panels={(estimate.panels as import("@/components/EstimatePDF").PanelPDF[]) ?? []}
                   photosByPanel={Object.keys(uploadsBySlug).length > 0 ? uploadsBySlug : null}
+                  zonesByPanel={zonesByPanel}
                 />
               </div>
             </div>

@@ -7,17 +7,20 @@ import AdminList from "./admin-list";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_DOMAINS = ["@advertisingvehicles.com", "@est03.com"];
-
 export default async function AdminPage() {
   const authSession = await getServerSession(authOptions);
   if (!authSession?.user?.email) redirect("/login");
 
   const userEmail = authSession.user.email;
-  const isAdmin = ADMIN_DOMAINS.some((d) => userEmail.endsWith(d));
-  if (!isAdmin) redirect("/ae/dashboard");
+  const supabaseCheck = getSupabaseClient();
+  const { data: adminRow } = await supabaseCheck
+    .from("admin_users")
+    .select("email")
+    .eq("email", userEmail)
+    .maybeSingle();
+  if (!adminRow) redirect("/ae/dashboard");
 
-  const supabase = getSupabaseClient();
+  const supabase = supabaseCheck;
 
   // Fetch ALL sessions across all AEs, sorted by AE then most-recent first
   const { data: sessions, error } = await supabase

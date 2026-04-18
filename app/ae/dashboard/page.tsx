@@ -10,8 +10,6 @@ import type { DashboardSession } from "./session-list";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_DOMAINS = ["@advertisingvehicles.com", "@est03.com"];
-
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
@@ -26,6 +24,15 @@ export default async function DashboardPage() {
   console.log("Dashboard: loading sessions for", userEmail);
 
   const supabase = getSupabaseClient();
+
+  // Check admin status via Supabase allowlist
+  const { data: adminRow } = await supabase
+    .from("admin_users")
+    .select("email")
+    .eq("email", userEmail)
+    .maybeSingle();
+  const isAdmin = !!adminRow;
+
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   // Issue 3 — auto-archive: mark sessions older than 30 days as archived
@@ -49,7 +56,6 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false });
 
   const sessions: DashboardSession[] = wrapSessions ?? [];
-  const isAdmin = ADMIN_DOMAINS.some((d) => userEmail.endsWith(d));
 
   return (
     <div className="min-h-screen bg-gray-50">
