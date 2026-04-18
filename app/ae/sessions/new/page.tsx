@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -62,14 +61,7 @@ export default function NewSessionPage() {
             </Link>
 
             <div className="flex flex-col justify-center">
-              <Image
-                src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
-                alt="WrapSnap"
-                width={108}
-                height={36}
-                style={{ height: 36, width: "auto", mixBlendMode: "multiply" }}
-                priority
-              />
+              <img src="/images/WrapSnap_Logo_Print_SM.jpg" alt="WrapSnap" className="h-10 w-auto object-contain" />
               <p className="text-[11px] mt-0.5" style={{ color: "#004876" }}>Powered by Advertising Vehicles</p>
             </div>
           </div>

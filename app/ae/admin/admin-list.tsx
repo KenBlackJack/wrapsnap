@@ -141,7 +141,7 @@ function SessionCard({ s, showAE }: { s: AdminSession; showAE: boolean }) {
           <p className="truncate text-sm text-gray-500 mt-0.5">{s.vehicle_description}</p>
         )}
         {showAE && (
-          <p className="text-xs text-gray-400 mt-0.5">{firstNameFromEmail(s.created_by)}</p>
+          <p className="text-xs text-gray-400 mt-0.5">by {firstNameFromEmail(s.created_by)}</p>
         )}
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[s.status]}`}>

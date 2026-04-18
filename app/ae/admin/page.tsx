@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getSupabaseClient } from "@/lib/supabase";
@@ -51,14 +50,7 @@ export default async function AdminPage() {
               </svg>
             </Link>
             <div className="flex flex-col justify-center">
-              <Image
-                src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
-                alt="WrapSnap"
-                width={108}
-                height={36}
-                style={{ height: 36, width: "auto", mixBlendMode: "multiply" }}
-                priority
-              />
+              <img src="/images/WrapSnap_Logo_Print_SM.jpg" alt="WrapSnap" className="h-10 w-auto object-contain" />
               <p className="text-[11px] mt-0.5" style={{ color: "#004876" }}>Powered by Advertising Vehicles</p>
             </div>
           </div>

@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getSupabaseClient } from "@/lib/supabase";
@@ -99,14 +98,7 @@ export default async function DashboardPage() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex flex-col justify-center">
-              <Image
-                src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
-                alt="WrapSnap"
-                width={108}
-                height={36}
-                style={{ height: 36, width: "auto", mixBlendMode: "multiply" }}
-                priority
-              />
+              <img src="/images/WrapSnap_Logo_Print_SM.jpg" alt="WrapSnap" className="h-10 w-auto object-contain" />
               <p className="text-[11px] mt-0.5" style={{ color: "#004876" }}>Powered by Advertising Vehicles</p>
             </div>
 
@@ -170,13 +162,13 @@ export default async function DashboardPage() {
               <li key={s.id} className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
                 <div className="min-w-0 flex-1">
                   {/* Line 1 — client name */}
-                  <p className="truncate text-lg font-semibold text-gray-900">{s.client_name}</p>
+                  <p className="truncate text-base font-semibold text-gray-900">{s.client_name}</p>
                   {/* Line 2 — vehicle description */}
                   {s.vehicle_description && (
                     <p className="truncate text-sm text-gray-500 mt-0.5">{s.vehicle_description}</p>
                   )}
                   {/* Line 3 — AE first name (subtle, for manager context) */}
-                  <p className="text-xs text-gray-400 mt-0.5">{firstNameFromEmail(s.created_by)}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">by {firstNameFromEmail(s.created_by)}</p>
                   {/* Line 4 — status + date */}
                   <div className="mt-1.5 flex flex-wrap items-center gap-2">
                     <StatusPill status={s.status} />

@@ -15,10 +15,15 @@ const CameraIcon = ({ className }: { className: string }) => (
 export default function ScanButton({ aeName }: { aeName: string }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("idle");
+  const [clientName, setClientName] = useState("");
   const [vehicleDesc, setVehicleDesc] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   async function handleStart() {
+    if (!clientName.trim()) {
+      setError("Client name is required.");
+      return;
+    }
     setStep("loading");
     setError(null);
     try {
@@ -26,7 +31,7 @@ export default function ScanButton({ aeName }: { aeName: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          client_name: aeName,
+          client_name: clientName.trim(),
           client_phone: "0000000000",
           expires_in_hours: 24,
           vehicle_description: vehicleDesc.trim() || undefined,
@@ -68,6 +73,21 @@ export default function ScanButton({ aeName }: { aeName: string }) {
           <span>Scan a Vehicle</span>
         </div>
         <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Client Name <span className="text-red-400">*</span></label>
+          <input
+            type="text"
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleStart(); }}
+            placeholder="e.g. Impact Fire Services"
+            required
+            autoFocus
+            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2"
+            style={{ "--tw-ring-color": "#007BBA" } as React.CSSProperties}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Vehicle Description <span className="text-gray-400 font-normal">(optional)</span></label>
           <input
             type="text"
             value={vehicleDesc}
@@ -75,7 +95,6 @@ export default function ScanButton({ aeName }: { aeName: string }) {
             onKeyDown={(e) => { if (e.key === "Enter") handleStart(); }}
             placeholder='e.g. "Route Van #3"'
             maxLength={30}
-            autoFocus
             className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2"
             style={{ "--tw-ring-color": "#007BBA" } as React.CSSProperties}
           />
@@ -87,7 +106,7 @@ export default function ScanButton({ aeName }: { aeName: string }) {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => { setStep("idle"); setVehicleDesc(""); setError(null); }}
+            onClick={() => { setStep("idle"); setClientName(""); setVehicleDesc(""); setError(null); }}
             className="flex-1 rounded-lg border border-gray-300 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
           >
             Cancel

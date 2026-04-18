@@ -1,6 +1,5 @@
 "use client";
 import { signIn } from "next-auth/react";
-import Image from "next/image";
 
 export default function LoginPage() {
   return (
@@ -8,15 +7,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md rounded-2xl bg-white p-10 shadow-lg">
         {/* WrapSnap logo */}
         <div className="flex flex-col items-center mb-8">
-          <Image
-            src="/images/WrapSnap_Logo_Horizontal_LG.jpg"
-            alt="WrapSnap"
-            width={280}
-            height={80}
-            className="w-full"
-            style={{ maxWidth: 280, height: "auto" }}
-            priority
-          />
+          <img src="/images/WrapSnap_Logo_Print_SM.jpg" alt="WrapSnap" className="h-14 w-auto object-contain" />
           <p className="mt-2 text-xs text-gray-400 tracking-wide">by Advertising Vehicles</p>
         </div>
 

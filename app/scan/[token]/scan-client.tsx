@@ -2,7 +2,6 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,42 +19,20 @@ interface CapturedPhoto {
 // ─── Shared logo ─────────────────────────────────────────────────────────────
 
 function Logo({ size = "large" }: { size?: "large" | "small" | "capture" }) {
-  if (size === "small") {
+  if (size === "large") {
     return (
-      <Image
-        src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
-        alt="WrapSnap"
-        width={110}
-        height={28}
-        style={{ height: 28, width: "auto", display: "block", mixBlendMode: "multiply" }}
-        priority
-      />
-    );
-  }
-  if (size === "capture") {
-    return (
-      <Image
-        src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
-        alt="WrapSnap"
-        width={130}
-        height={36}
-        style={{ height: 36, width: "auto", display: "block", mixBlendMode: "multiply" }}
-        priority
-      />
+      <div className="flex flex-col items-center mb-6">
+        <img src="/images/WrapSnap_Logo_Print_SM.jpg" alt="WrapSnap" className="h-12 w-auto object-contain" />
+        <p className="mt-1.5 text-xs text-gray-400">by Advertising Vehicles</p>
+      </div>
     );
   }
   return (
-    <div className="flex flex-col items-center mb-6">
-      <Image
-        src="/images/WrapSnap_Logo_Horizontal_LG.jpg"
-        alt="WrapSnap"
-        width={200}
-        height={56}
-        style={{ maxWidth: 200, width: "100%", height: "auto", display: "block", mixBlendMode: "multiply" }}
-        priority
-      />
-      <p className="mt-1.5 text-xs text-gray-400">by Advertising Vehicles</p>
-    </div>
+    <img
+      src="/images/WrapSnap_Logo_Print_SM.jpg"
+      alt="WrapSnap"
+      className={size === "small" ? "h-8 w-auto object-contain" : "h-10 w-auto object-contain"}
+    />
   );
 }
 
