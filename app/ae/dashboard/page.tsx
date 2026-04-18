@@ -15,9 +15,19 @@ interface WrapSession {
   id: string;
   client_name: string;
   vehicle_description: string | null;
+  created_by: string;
   status: SessionStatus;
   created_at: string;
 }
+
+/** Extract "John" from "john.doe@company.com" */
+function firstNameFromEmail(email: string): string {
+  const local = email.split("@")[0];
+  const first = local.split(/[._-]/)[0];
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
+const ADMIN_DOMAINS = ["@advertisingvehicles.com", "@est03.com"];
 
 const STATUS_STYLES: Record<SessionStatus, string> = {
   pending:  "bg-gray-100 text-gray-600",
@@ -74,12 +84,13 @@ export default async function DashboardPage() {
   // Issue 3 — query: show sessions within the last 30 days OR not archived
   const { data: wrapSessions } = await supabase
     .from("sessions")
-    .select("id, client_name, vehicle_description, status, created_at")
+    .select("id, client_name, vehicle_description, created_by, status, created_at")
     .eq("created_by", userEmail)
     .or(`created_at.gte.${thirtyDaysAgo},status.neq.archived`)
     .order("created_at", { ascending: false });
 
   const sessions: WrapSession[] = wrapSessions ?? [];
+  const isAdmin = ADMIN_DOMAINS.some((d) => userEmail.endsWith(d));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -100,6 +111,15 @@ export default async function DashboardPage() {
             </div>
 
             <div className="flex items-center gap-3">
+              {isAdmin && (
+                <Link
+                  href="/ae/admin"
+                  className="hidden text-sm font-medium sm:block transition hover:opacity-80"
+                  style={{ color: "#007BBA" }}
+                >
+                  Admin
+                </Link>
+              )}
               <span className="hidden text-sm sm:block" style={{ color: "#004876" }}>{userName}</span>
               <SignOutButton />
             </div>
@@ -148,12 +168,16 @@ export default async function DashboardPage() {
           <ul className="space-y-3">
             {sessions.map((s) => (
               <li key={s.id} className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
-                {/* Issue 2 — card layout: name → vehicle → status + date */}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-lg font-bold text-gray-900">{s.client_name}</p>
+                  {/* Line 1 — client name */}
+                  <p className="truncate text-lg font-semibold text-gray-900">{s.client_name}</p>
+                  {/* Line 2 — vehicle description */}
                   {s.vehicle_description && (
                     <p className="truncate text-sm text-gray-500 mt-0.5">{s.vehicle_description}</p>
                   )}
+                  {/* Line 3 — AE first name (subtle, for manager context) */}
+                  <p className="text-xs text-gray-400 mt-0.5">{firstNameFromEmail(s.created_by)}</p>
+                  {/* Line 4 — status + date */}
                   <div className="mt-1.5 flex flex-wrap items-center gap-2">
                     <StatusPill status={s.status} />
                     <span className="text-xs text-gray-400">{formatDate(s.created_at)}</span>

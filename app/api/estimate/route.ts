@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseClient } from "@/lib/supabase";
 import Anthropic from "@anthropic-ai/sdk";
+import { Resend } from "resend";
 
 export const runtime = "nodejs";
 
@@ -148,10 +149,10 @@ export async function POST(req: NextRequest) {
 
   const supabase = getSupabaseClient();
 
-  // Verify session
+  // Verify session — also fetch fields needed for email notification
   const { data: session, error: sessionError } = await supabase
     .from("sessions")
-    .select("id, status, expires_at")
+    .select("id, status, expires_at, created_by, client_name, vehicle_description")
     .eq("token", token.trim())
     .single();
 
@@ -337,6 +338,102 @@ export async function POST(req: NextRequest) {
     console.error("Estimate: failed to mark session complete", { message: updateError.message });
   } else {
     console.log("Estimate: session marked complete", { sessionId: session.id });
+  }
+
+  // ── Email notification to AE ──────────────────────────────────────────────
+  try {
+    const resendKey = process.env.RESEND_API_KEY ?? "";
+    if (resendKey && resendKey !== "re_PLACEHOLDER") {
+      const resend = new Resend(resendKey);
+      const aeEmail = session.created_by as string;
+      const clientName = session.client_name as string;
+      const vehicleDesc = (session.vehicle_description as string | null) ?? "";
+      const subjectVehicle = vehicleDesc ? ` ${vehicleDesc}` : "";
+      const sessionUrl = `https://wrapsnap.advertisingvehicles.com/ae/sessions/${session.id}`;
+      const totalSqft = totals?.total_sqft;
+      const low = totals?.total_low;
+      const high = totals?.total_high;
+      const confidence = (estimate.confidence as string) ?? "—";
+
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
+        <!-- Header -->
+        <tr>
+          <td style="background:#004876;padding:20px 28px;">
+            <p style="margin:0;color:#ffffff;font-size:18px;font-weight:700;letter-spacing:-0.3px;">WrapSnap</p>
+            <p style="margin:4px 0 0;color:rgba(255,255,255,0.7);font-size:12px;">by Advertising Vehicles</p>
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:28px;">
+            <p style="margin:0 0 6px;font-size:20px;font-weight:700;color:#111827;">Estimate ready</p>
+            <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">Your WrapSnap estimate has been completed.</p>
+
+            <!-- Client details -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:20px;">
+              <tr>
+                <td style="padding:16px 20px;border-bottom:1px solid #e5e7eb;">
+                  <p style="margin:0;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;">Client</p>
+                  <p style="margin:4px 0 0;font-size:16px;font-weight:700;color:#111827;">${clientName}</p>
+                  ${vehicleDesc ? `<p style="margin:2px 0 0;font-size:13px;color:#6b7280;">${vehicleDesc}</p>` : ""}
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:16px 20px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="width:50%;padding-right:12px;">
+                        <p style="margin:0;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;">Total sq ft</p>
+                        <p style="margin:4px 0 0;font-size:22px;font-weight:700;color:#007BBA;">${totalSqft != null ? totalSqft.toFixed(1) : "—"}</p>
+                        ${low != null && high != null ? `<p style="margin:2px 0 0;font-size:12px;color:#9ca3af;">Range: ${low.toFixed(1)} – ${high.toFixed(1)}</p>` : ""}
+                      </td>
+                      <td style="width:50%;padding-left:12px;">
+                        <p style="margin:0;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;">Confidence</p>
+                        <p style="margin:4px 0 0;font-size:16px;font-weight:600;color:#111827;text-transform:capitalize;">${confidence}</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <!-- CTA -->
+            <a href="${sessionUrl}" style="display:block;text-align:center;background:#007BBA;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:13px 24px;border-radius:8px;margin-bottom:20px;">
+              View Full Estimate →
+            </a>
+
+            <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">
+              You received this because you created this WrapSnap session.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+      await resend.emails.send({
+        from: "WrapSnap <notifications@advertisingvehicles.com>",
+        to: [aeEmail],
+        subject: `WrapSnap estimate ready — ${clientName}${subjectVehicle}`,
+        html,
+      });
+      console.log("Estimate: email sent to", aeEmail);
+    } else {
+      console.log("Estimate: skipping email (RESEND_API_KEY not configured)");
+    }
+  } catch (emailError) {
+    // Non-fatal — estimate response is not affected
+    console.error("Estimate: email send failed", {
+      error: emailError instanceof Error ? emailError.message : String(emailError),
+    });
   }
 
   return NextResponse.json({ estimateId: estimateRow?.id ?? null, ...estimate });

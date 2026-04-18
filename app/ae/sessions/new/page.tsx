@@ -9,6 +9,7 @@ export default function NewSessionPage() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [vehicleDesc, setVehicleDesc] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -16,7 +17,7 @@ export default function NewSessionPage() {
     setError(null);
 
     const form = e.currentTarget;
-    const vehicleDescription = (form.elements.namedItem("vehicle_description") as HTMLInputElement).value.trim();
+    const vehicleDescription = vehicleDesc.trim();
     const body = {
       client_name: (form.elements.namedItem("client_name") as HTMLInputElement).value.trim(),
       client_phone: (form.elements.namedItem("client_phone") as HTMLInputElement).value.trim(),
@@ -127,9 +128,15 @@ export default function NewSessionPage() {
               name="vehicle_description"
               type="text"
               autoComplete="off"
+              maxLength={30}
+              value={vehicleDesc}
+              onChange={(e) => setVehicleDesc(e.target.value.slice(0, 30))}
               placeholder='e.g. "Service Route Van #3"'
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
+            <p className={`mt-1 text-right text-xs ${vehicleDesc.length >= 30 ? "text-red-500" : "text-gray-400"}`}>
+              {vehicleDesc.length}/30
+            </p>
           </div>
 
           {/* Expiry */}

@@ -67,16 +67,22 @@ export default function ScanButton({ aeName }: { aeName: string }) {
           </span>
           <span>Scan a Vehicle</span>
         </div>
-        <input
-          type="text"
-          value={vehicleDesc}
-          onChange={(e) => setVehicleDesc(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleStart(); }}
-          placeholder='Vehicle description, e.g. "Route Van #3"'
-          autoFocus
-          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2"
-          style={{ "--tw-ring-color": "#007BBA" } as React.CSSProperties}
-        />
+        <div>
+          <input
+            type="text"
+            value={vehicleDesc}
+            onChange={(e) => setVehicleDesc(e.target.value.slice(0, 30))}
+            onKeyDown={(e) => { if (e.key === "Enter") handleStart(); }}
+            placeholder='e.g. "Route Van #3"'
+            maxLength={30}
+            autoFocus
+            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2"
+            style={{ "--tw-ring-color": "#007BBA" } as React.CSSProperties}
+          />
+          <p className={`mt-1 text-right text-xs ${vehicleDesc.length >= 30 ? "text-red-500" : "text-gray-400"}`}>
+            {vehicleDesc.length}/30
+          </p>
+        </div>
         {error && <p className="text-xs text-red-600">{error}</p>}
         <div className="flex gap-2">
           <button
