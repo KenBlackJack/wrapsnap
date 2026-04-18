@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseClient } from "@/lib/supabase";
 import Anthropic from "@anthropic-ai/sdk";
 import { Resend } from "resend";
+import { generatePDF } from "@/lib/generate-pdf";
+import type { PanelPDF } from "@/components/EstimatePDF";
 
 export const runtime = "nodejs";
 
@@ -353,7 +355,36 @@ export async function POST(req: NextRequest) {
       const totalSqft = totals?.total_sqft;
       const low = totals?.total_low;
       const high = totals?.total_high;
+      const printedWrap = totals?.printed_wrap_sqft;
+      const cutVinyl = totals?.cut_vinyl_sqft;
       const confidence = (estimate.confidence as string) ?? "—";
+      const confidenceNote = (estimate.confidence_note as string | null) ?? null;
+
+      // ── Generate PDF attachment ──────────────────────────────────────────
+      let pdfBuffer: Buffer | null = null;
+      try {
+        pdfBuffer = await generatePDF({
+          clientName,
+          vehicleDescription: vehicleDesc || null,
+          vehicleType: (estimate.vehicle_type as string) ?? null,
+          sessionDate: new Date().toISOString(),
+          totalSqft: totalSqft ?? null,
+          sqftLow: low ?? null,
+          sqftHigh: high ?? null,
+          confidence: confidence === "—" ? null : confidence,
+          confidenceNote,
+          panels: (estimate.panels ?? []) as PanelPDF[],
+        });
+        console.log("Estimate: PDF generated", { bytes: pdfBuffer.length });
+      } catch (pdfError) {
+        console.error("Estimate: PDF generation failed (email will send without attachment)", {
+          error: pdfError instanceof Error ? pdfError.message : String(pdfError),
+        });
+      }
+
+      // ── Build email HTML ─────────────────────────────────────────────────
+      const hasMaterialBreakdown =
+        (printedWrap != null && printedWrap > 0) || (cutVinyl != null && cutVinyl > 0);
 
       const html = `<!DOCTYPE html>
 <html lang="en">
@@ -377,6 +408,7 @@ export async function POST(req: NextRequest) {
 
             <!-- Client details -->
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:20px;">
+              <!-- Client name + vehicle -->
               <tr>
                 <td style="padding:16px 20px;border-bottom:1px solid #e5e7eb;">
                   <p style="margin:0;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;">Client</p>
@@ -384,8 +416,9 @@ export async function POST(req: NextRequest) {
                   ${vehicleDesc ? `<p style="margin:2px 0 0;font-size:13px;color:#6b7280;">${vehicleDesc}</p>` : ""}
                 </td>
               </tr>
+              <!-- Total sq ft + confidence -->
               <tr>
-                <td style="padding:16px 20px;">
+                <td style="padding:16px 20px;border-bottom:1px solid #e5e7eb;">
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td style="width:50%;padding-right:12px;">
@@ -401,7 +434,40 @@ export async function POST(req: NextRequest) {
                   </table>
                 </td>
               </tr>
+              ${hasMaterialBreakdown ? `
+              <!-- Material breakdown -->
+              <tr>
+                <td style="padding:14px 20px;${confidenceNote ? "border-bottom:1px solid #e5e7eb;" : ""}">
+                  <p style="margin:0 0 10px;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;">Material breakdown</p>
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    ${printedWrap != null && printedWrap > 0 ? `
+                    <tr>
+                      <td style="padding:3px 0;font-size:13px;color:#374151;">Printed Wrap</td>
+                      <td style="padding:3px 0;font-size:13px;color:#111827;text-align:right;font-weight:600;">${printedWrap.toFixed(1)} sq ft</td>
+                    </tr>` : ""}
+                    ${cutVinyl != null && cutVinyl > 0 ? `
+                    <tr>
+                      <td style="padding:3px 0;font-size:13px;color:#374151;">Cut Vinyl</td>
+                      <td style="padding:3px 0;font-size:13px;color:#111827;text-align:right;font-weight:600;">${cutVinyl.toFixed(1)} sq ft</td>
+                    </tr>` : ""}
+                  </table>
+                </td>
+              </tr>` : ""}
+              ${confidenceNote ? `
+              <!-- Confidence note -->
+              <tr>
+                <td style="padding:14px 20px;">
+                  <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;">Notes</p>
+                  <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.5;">${confidenceNote}</p>
+                </td>
+              </tr>` : ""}
             </table>
+
+            ${pdfBuffer ? `
+            <!-- PDF attachment notice -->
+            <p style="margin:0 0 20px;font-size:13px;color:#6b7280;text-align:center;">
+              &#128206; Full estimate attached as PDF
+            </p>` : ""}
 
             <!-- CTA -->
             <a href="${sessionUrl}" style="display:block;text-align:center;background:#007BBA;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:13px 24px;border-radius:8px;margin-bottom:20px;">
@@ -424,8 +490,18 @@ export async function POST(req: NextRequest) {
         to: [aeEmail],
         subject: `WrapSnap estimate ready — ${clientName}${subjectVehicle}`,
         html,
+        ...(pdfBuffer
+          ? {
+              attachments: [
+                {
+                  filename: `WrapSnap-Estimate-${clientName.replace(/\s+/g, "-")}.pdf`,
+                  content: pdfBuffer,
+                },
+              ],
+            }
+          : {}),
       });
-      console.log("Estimate: email sent to", aeEmail);
+      console.log("Estimate: email sent to", aeEmail, { hasAttachment: !!pdfBuffer });
     } else {
       console.log("Estimate: skipping email (RESEND_API_KEY not configured)");
     }
