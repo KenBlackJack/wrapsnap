@@ -137,9 +137,7 @@ export default async function SessionDetailPage({
   const scanUrl = `https://wrapsnap.advertisingvehicles.com/scan/${session.token}`;
   const status = session.status as SessionStatus;
 
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const isOldSession = new Date(session.created_at) < thirtyDaysAgo;
-  const canArchive = isOldSession && status !== "archived";
+  const canArchive = status !== "archived";
 
   async function archiveSession() {
     "use server";
@@ -187,9 +185,24 @@ export default async function SessionDetailPage({
               )}
               <p className="mt-0.5 text-sm text-gray-400">{formatPhone(session.client_phone)}</p>
             </div>
-            <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium capitalize ${STATUS_STYLES[status]}`}>
-              {status}
-            </span>
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium capitalize ${STATUS_STYLES[status]}`}>
+                {status}
+              </span>
+              {canArchive && (
+                <form action={archiveSession}>
+                  <button
+                    type="submit"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1 text-sm text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                    </svg>
+                    Archive
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
 
           <dl className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 text-sm">
@@ -202,20 +215,6 @@ export default async function SessionDetailPage({
               <dd className="mt-0.5 text-gray-900">{formatDateTime(session.expires_at)}</dd>
             </div>
           </dl>
-
-          {/* Archive button — only for sessions older than 30 days */}
-          {canArchive && (
-            <div className="mt-5 pt-5 border-t border-gray-100">
-              <form action={archiveSession}>
-                <button
-                  type="submit"
-                  className="text-sm text-gray-400 hover:text-gray-600 transition underline underline-offset-2"
-                >
-                  Archive this session
-                </button>
-              </form>
-            </div>
-          )}
         </div>
 
         {/* Scan link + PIN */}

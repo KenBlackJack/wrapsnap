@@ -5,52 +5,12 @@ import { authOptions } from "@/lib/auth";
 import { getSupabaseClient } from "@/lib/supabase";
 import SignOutButton from "./sign-out-button";
 import ScanButton from "./scan-button";
+import SessionList from "./session-list";
+import type { DashboardSession } from "./session-list";
 
 export const dynamic = "force-dynamic";
 
-type SessionStatus = "pending" | "active" | "complete" | "expired" | "archived";
-
-interface WrapSession {
-  id: string;
-  client_name: string;
-  vehicle_description: string | null;
-  created_by: string;
-  status: SessionStatus;
-  created_at: string;
-}
-
-/** Extract "John" from "john.doe@company.com" */
-function firstNameFromEmail(email: string): string {
-  const local = email.split("@")[0];
-  const first = local.split(/[._-]/)[0];
-  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
-}
-
 const ADMIN_DOMAINS = ["@advertisingvehicles.com", "@est03.com"];
-
-const STATUS_STYLES: Record<SessionStatus, string> = {
-  pending:  "bg-gray-100 text-gray-600",
-  active:   "bg-blue-100 text-blue-700",
-  complete: "bg-green-100 text-green-700",
-  expired:  "bg-red-100 text-red-700",
-  archived: "bg-gray-100 text-gray-500",
-};
-
-function StatusPill({ status }: { status: SessionStatus }) {
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[status]}`}>
-      {status}
-    </span>
-  );
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -88,7 +48,7 @@ export default async function DashboardPage() {
     .or(`created_at.gte.${thirtyDaysAgo},status.neq.archived`)
     .order("created_at", { ascending: false });
 
-  const sessions: WrapSession[] = wrapSessions ?? [];
+  const sessions: DashboardSession[] = wrapSessions ?? [];
   const isAdmin = ADMIN_DOMAINS.some((d) => userEmail.endsWith(d));
 
   return (
@@ -146,45 +106,7 @@ export default async function DashboardPage() {
         {/* Recent sessions */}
         <h2 className="mb-4 text-base font-semibold text-gray-900">Recent Sessions</h2>
 
-        {sessions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white py-20 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
-              <svg className="h-7 w-7 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
-              </svg>
-            </div>
-            <p className="text-sm font-medium text-gray-900">No sessions yet</p>
-            <p className="mt-1 text-sm text-gray-500">Create your first session to get started.</p>
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {sessions.map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
-                <div className="min-w-0 flex-1">
-                  {/* Line 1 — client name */}
-                  <p className="truncate text-base font-semibold text-gray-900">{s.client_name}</p>
-                  {/* Line 2 — vehicle description */}
-                  {s.vehicle_description && (
-                    <p className="truncate text-sm text-gray-500 mt-0.5">{s.vehicle_description}</p>
-                  )}
-                  {/* Line 3 — AE first name (subtle, for manager context) */}
-                  <p className="text-xs text-gray-400 mt-0.5">by {firstNameFromEmail(s.created_by)}</p>
-                  {/* Line 4 — status + date */}
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                    <StatusPill status={s.status} />
-                    <span className="text-xs text-gray-400">{formatDate(s.created_at)}</span>
-                  </div>
-                </div>
-                <Link
-                  href={`/ae/sessions/${s.id}`}
-                  className="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-1"
-                >
-                  View
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <SessionList initialSessions={sessions} />
 
         {/* Issue 3 — archive link */}
         <div className="mt-6 text-center">

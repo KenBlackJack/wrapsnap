@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Link from "next/link";
 
 type SessionStatus = "pending" | "active" | "complete" | "expired" | "archived";
 
-export interface AdminSession {
+export interface DashboardSession {
   id: string;
   client_name: string;
   vehicle_description: string | null;
@@ -36,15 +36,13 @@ function formatDate(iso: string) {
   });
 }
 
-// ─── Session card with 3-dot menu ────────────────────────────────────────────
+// ─── Three-dot menu + confirm dialog ─────────────────────────────────────────
 
 function SessionCard({
   s,
-  showAE,
   onRemove,
 }: {
-  s: AdminSession;
-  showAE: boolean;
+  s: DashboardSession;
   onRemove: (id: string) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -76,14 +74,13 @@ function SessionCard({
   return (
     <>
       <li className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+        {/* Card content */}
         <div className="min-w-0 flex-1">
           <p className="truncate text-base font-semibold text-gray-900">{s.client_name}</p>
           {s.vehicle_description && (
             <p className="truncate text-sm text-gray-500 mt-0.5">{s.vehicle_description}</p>
           )}
-          {showAE && (
-            <p className="text-xs text-gray-400 mt-0.5">by {firstNameFromEmail(s.created_by)}</p>
-          )}
+          <p className="text-xs text-gray-400 mt-0.5">by {firstNameFromEmail(s.created_by)}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[s.status]}`}
@@ -98,7 +95,7 @@ function SessionCard({
         <div className="flex items-center gap-1.5 shrink-0">
           <Link
             href={`/ae/sessions/${s.id}`}
-            className="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-1"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-1"
           >
             View
           </Link>
@@ -126,7 +123,12 @@ function SessionCard({
 
             {menuOpen && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                {/* Invisible backdrop — closes menu on outside click */}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setMenuOpen(false)}
+                />
+                {/* Dropdown */}
                 <div className="absolute right-0 top-full z-20 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
                   <button
                     type="button"
@@ -216,112 +218,50 @@ function SessionCard({
   );
 }
 
-// ─── Admin list ───────────────────────────────────────────────────────────────
+// ─── List wrapper — manages removal state ─────────────────────────────────────
 
-export default function AdminList({ sessions: initialSessions }: { sessions: AdminSession[] }) {
+export default function SessionList({
+  initialSessions,
+}: {
+  initialSessions: DashboardSession[];
+}) {
   const [sessions, setSessions] = useState(initialSessions);
-  const [search, setSearch] = useState("");
 
   function handleRemove(id: string) {
     setSessions((prev) => prev.filter((s) => s.id !== id));
   }
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    if (!q) return sessions;
-    return sessions.filter(
-      (s) =>
-        s.client_name.toLowerCase().includes(q) ||
-        (s.vehicle_description ?? "").toLowerCase().includes(q) ||
-        s.created_by.toLowerCase().includes(q) ||
-        firstNameFromEmail(s.created_by).toLowerCase().includes(q),
+  if (sessions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white py-20 text-center">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
+          <svg
+            className="h-7 w-7 text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"
+            />
+          </svg>
+        </div>
+        <p className="text-sm font-medium text-gray-900">No sessions yet</p>
+        <p className="mt-1 text-sm text-gray-500">
+          Create your first session to get started.
+        </p>
+      </div>
     );
-  }, [sessions, search]);
-
-  // Group by created_by — preserve insertion order (sessions are pre-sorted by AE then date)
-  const groups = useMemo(() => {
-    const map = new Map<string, AdminSession[]>();
-    for (const s of filtered) {
-      const existing = map.get(s.created_by);
-      if (existing) existing.push(s);
-      else map.set(s.created_by, [s]);
-    }
-    return Array.from(map.entries());
-  }, [filtered]);
-
-  const isSearching = search.trim().length > 0;
+  }
 
   return (
-    <div>
-      {/* Search */}
-      <div className="mb-6 relative">
-        <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={2}
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 10.607z"
-          />
-        </svg>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by client, vehicle, or AE name…"
-          className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1"
-          style={{ "--tw-ring-color": "#007BBA" } as React.CSSProperties}
-        />
-      </div>
-
-      {sessions.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white py-20 text-center">
-          <p className="text-sm font-medium text-gray-900">No sessions found</p>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white py-14 text-center">
-          <p className="text-sm text-gray-500">No sessions match &ldquo;{search}&rdquo;</p>
-        </div>
-      ) : isSearching ? (
-        /* Flat list when searching — easier to scan across AEs */
-        <ul className="space-y-3">
-          {filtered.map((s) => (
-            <SessionCard key={s.id} s={s} showAE onRemove={handleRemove} />
-          ))}
-        </ul>
-      ) : (
-        /* Grouped by AE when not searching */
-        <div className="space-y-8">
-          {groups.map(([aeEmail, aeSessions]) => (
-            <section key={aeEmail}>
-              <div className="mb-3 flex items-center gap-3">
-                <div
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                  style={{ backgroundColor: "#007BBA" }}
-                >
-                  {firstNameFromEmail(aeEmail).charAt(0)}
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-gray-900">{firstNameFromEmail(aeEmail)}</p>
-                  <p className="text-xs text-gray-400 truncate">{aeEmail}</p>
-                </div>
-                <span className="ml-auto shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                  {aeSessions.length} {aeSessions.length === 1 ? "session" : "sessions"}
-                </span>
-              </div>
-              <ul className="space-y-2">
-                {aeSessions.map((s) => (
-                  <SessionCard key={s.id} s={s} showAE={false} onRemove={handleRemove} />
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
-      )}
-    </div>
+    <ul className="space-y-3">
+      {sessions.map((s) => (
+        <SessionCard key={s.id} s={s} onRemove={handleRemove} />
+      ))}
+    </ul>
   );
 }
