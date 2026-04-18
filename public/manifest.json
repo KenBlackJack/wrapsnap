@@ -1,0 +1,22 @@
+{
+  "name": "WrapSnap",
+  "short_name": "WrapSnap",
+  "description": "AI-powered vinyl graphics estimator by Advertising Vehicles",
+  "start_url": "/ae/dashboard",
+  "display": "standalone",
+  "background_color": "#004876",
+  "theme_color": "#004876",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/images/WrapSnap_Logo_Vertical_Print_SM.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/images/WrapSnap_Logo_Vertical_Print_LG.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
