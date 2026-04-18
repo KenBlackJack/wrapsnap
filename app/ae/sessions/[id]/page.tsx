@@ -168,7 +168,7 @@ export default async function SessionDetailPage({
               </svg>
             </Link>
             <div className="flex flex-col justify-center">
-              <img src="/images/WrapSnap_Logo_Print_SM.jpg" alt="WrapSnap" className="h-10 w-auto object-contain" />
+              <img src="/images/WrapSnap_Logo_Horizontal_SM.jpg" alt="WrapSnap" className="h-10 w-auto object-contain" />
               <p className="text-[11px] mt-0.5" style={{ color: "#004876" }}>Powered by Advertising Vehicles</p>
             </div>
           </div>

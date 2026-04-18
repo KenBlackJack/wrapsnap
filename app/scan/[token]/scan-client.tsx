@@ -22,14 +22,14 @@ function Logo({ size = "large" }: { size?: "large" | "small" | "capture" }) {
   if (size === "large") {
     return (
       <div className="flex flex-col items-center mb-6">
-        <img src="/images/WrapSnap_Logo_Print_SM.jpg" alt="WrapSnap" className="h-12 w-auto object-contain" />
+        <img src="/images/WrapSnap_Logo_Horizontal_SM.jpg" alt="WrapSnap" className="h-12 w-auto object-contain" />
         <p className="mt-1.5 text-xs text-gray-400">by Advertising Vehicles</p>
       </div>
     );
   }
   return (
     <img
-      src="/images/WrapSnap_Logo_Print_SM.jpg"
+      src="/images/WrapSnap_Logo_Horizontal_SM.jpg"
       alt="WrapSnap"
       className={size === "small" ? "h-8 w-auto object-contain" : "h-10 w-auto object-contain"}
     />
