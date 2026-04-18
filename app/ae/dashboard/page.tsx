@@ -74,7 +74,7 @@ export default async function DashboardPage() {
               {isAdmin && (
                 <Link
                   href="/ae/admin"
-                  className="hidden text-sm font-medium sm:block transition hover:opacity-80"
+                  className="text-sm font-medium transition hover:opacity-80"
                   style={{ color: "#007BBA" }}
                 >
                   Admin
