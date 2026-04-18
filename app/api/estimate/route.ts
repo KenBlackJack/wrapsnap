@@ -486,7 +486,7 @@ export async function POST(req: NextRequest) {
 </html>`;
 
       await resend.emails.send({
-        from: "WrapSnap <notifications@advertisingvehicles.com>",
+        from: "WrapSnap <wrapsnap@mail.wrapsnap.advertisingvehicles.com>",
         to: [aeEmail],
         subject: `WrapSnap estimate ready — ${clientName}${subjectVehicle}`,
         html,
