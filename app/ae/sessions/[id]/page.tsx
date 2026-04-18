@@ -81,7 +81,7 @@ export default async function SessionDetailPage({
   // Fetch session — must be owned by this AE
   const { data: session, error } = await supabase
     .from("sessions")
-    .select("id, token, client_name, client_phone, vehicle_description, status, created_at, expires_at, created_by")
+    .select("id, token, client_name, client_phone, vehicle_description, status, created_at, created_by")
     .eq("id", id)
     .single();
 
@@ -137,6 +137,12 @@ export default async function SessionDetailPage({
   const scanUrl = `https://wrapsnap.advertisingvehicles.com/scan/${session.token}`;
   const status = session.status as SessionStatus;
 
+  // A session is a self-scan when the AE scanned the vehicle themselves.
+  // Self-scan sessions have no real phone number — the dashboard scan button
+  // sends "0000000000" as a placeholder, which the API stores verbatim.
+  const phone = (session.client_phone ?? "").trim();
+  const isSelfScan = !phone || phone === "0000000000";
+
   const canArchive = status !== "archived";
 
   async function archiveSession() {
@@ -185,7 +191,9 @@ export default async function SessionDetailPage({
               {session.vehicle_description && (
                 <p className="mt-0.5 text-sm text-gray-500">{session.vehicle_description}</p>
               )}
-              <p className="mt-0.5 text-sm text-gray-400">{formatPhone(session.client_phone)}</p>
+              {!isSelfScan && (
+                <p className="mt-0.5 text-sm text-gray-400">{formatPhone(session.client_phone)}</p>
+              )}
             </div>
             <div className="flex items-center gap-2 flex-wrap justify-end">
               <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium capitalize ${STATUS_STYLES[status]}`}>
@@ -207,20 +215,18 @@ export default async function SessionDetailPage({
             </div>
           </div>
 
-          <dl className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 text-sm">
+          <dl className="mt-5 text-sm">
             <div>
               <dt className="font-medium text-gray-500">Created</dt>
               <dd className="mt-0.5 text-gray-900">{formatDateTime(session.created_at)}</dd>
             </div>
-            <div>
-              <dt className="font-medium text-gray-500">Expires</dt>
-              <dd className="mt-0.5 text-gray-900">{formatDateTime(session.expires_at)}</dd>
-            </div>
           </dl>
         </div>
 
-        {/* Scan link + PIN — only relevant while session is pending */}
-        {status === "pending" && (
+        {/* Scan link + PIN — only for pending client-invite sessions.
+            Hidden for self-scan sessions (no real phone) and once
+            active/complete (nothing left to do with the link). */}
+        {status === "pending" && !isSelfScan && (
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-5">
             <div>
               <p className="text-sm font-medium text-gray-700 mb-1.5">Client scan link</p>
