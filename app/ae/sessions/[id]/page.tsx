@@ -302,6 +302,7 @@ export default async function SessionDetailPage({
                   confidence={estimate.confidence}
                   confidenceNote={estimate.confidence_note}
                   panels={(estimate.panels as import("@/components/EstimatePDF").PanelPDF[]) ?? []}
+                  photosByPanel={Object.keys(uploadsBySlug).length > 0 ? uploadsBySlug : null}
                 />
               </div>
             </div>

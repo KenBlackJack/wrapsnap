@@ -360,6 +360,17 @@ export async function POST(req: NextRequest) {
       const confidence = (estimate.confidence as string) ?? "—";
       const confidenceNote = (estimate.confidence_note as string | null) ?? null;
 
+      // ── Build signed photo URLs for PDF ─────────────────────────────────
+      const photosByPanel: Record<string, string> = {};
+      for (const upload of uploads) {
+        const { data: signed } = await supabase.storage
+          .from("vehicle-photos")
+          .createSignedUrl(upload.storage_path, 3600);
+        if (signed?.signedUrl) {
+          photosByPanel[upload.panel] = signed.signedUrl;
+        }
+      }
+
       // ── Generate PDF attachment ──────────────────────────────────────────
       let pdfBuffer: Buffer | null = null;
       try {
@@ -374,6 +385,7 @@ export async function POST(req: NextRequest) {
           confidence: confidence === "—" ? null : confidence,
           confidenceNote,
           panels: (estimate.panels ?? []) as PanelPDF[],
+          photosByPanel: Object.keys(photosByPanel).length > 0 ? photosByPanel : null,
         });
         console.log("Estimate: PDF generated", { bytes: pdfBuffer.length });
       } catch (pdfError) {

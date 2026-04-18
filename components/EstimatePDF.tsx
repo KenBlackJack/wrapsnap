@@ -44,6 +44,8 @@ export interface EstimatePDFProps {
   confidence?: string | null;
   confidenceNote?: string | null;
   panels: PanelPDF[];
+  /** Map of panel slug → photo URL (signed Supabase URL or base64 data URI) */
+  photosByPanel?: Record<string, string> | null;
 }
 
 // ─── Colour tokens ────────────────────────────────────────────────────────────
@@ -128,6 +130,13 @@ const s = StyleSheet.create({
   footer:           { position: "absolute", bottom: 20, left: 40, right: 40, borderTopWidth: 1, borderTopColor: BORDER, paddingTop: 8, flexDirection: "row", justifyContent: "space-between" },
   footerDisclaimer: { fontSize: 7, color: "#9CA3AF", flexGrow: 1, marginRight: 12 },
   footerUrl:        { fontSize: 7, color: GRAY_TEXT },
+
+  // Vehicle photos grid
+  photosGrid:  { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
+  photoCell:   { width: "48.5%", marginBottom: 8 },
+  photoImg:    { width: "100%", height: 118, objectFit: "cover" },
+  photoEmpty:  { width: "100%", height: 118, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center" },
+  photoLabel:  { fontSize: 7, color: GRAY_TEXT, marginTop: 3, textAlign: "center" },
 });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -159,6 +168,13 @@ function confColors(c?: string | null): { bg: string; color: string } {
 
 // ─── PDF Document ─────────────────────────────────────────────────────────────
 
+const PHOTO_PANELS: { slug: string; label: string }[] = [
+  { slug: "driver_side",    label: "Driver Side" },
+  { slug: "passenger_side", label: "Passenger Side" },
+  { slug: "front",          label: "Front" },
+  { slug: "rear",           label: "Rear" },
+];
+
 export default function EstimatePDFDocument({
   logoUrl,
   clientName,
@@ -171,6 +187,7 @@ export default function EstimatePDFDocument({
   confidence,
   confidenceNote,
   panels,
+  photosByPanel,
 }: EstimatePDFProps) {
   // Derive production totals from zone data
   let printedWrap = 0;
@@ -288,6 +305,30 @@ export default function EstimatePDFDocument({
                 </View>
               );
             })}
+          </View>
+        )}
+
+        {/* ── VEHICLE PHOTOS ── */}
+        {photosByPanel && PHOTO_PANELS.some((p) => !!photosByPanel[p.slug]) && (
+          <View style={{ marginBottom: 14 }} break>
+            <Text style={s.sectionTitle}>VEHICLE PHOTOS</Text>
+            <View style={s.photosGrid}>
+              {PHOTO_PANELS.map(({ slug, label }) => {
+                const url = photosByPanel[slug];
+                return (
+                  <View key={slug} style={s.photoCell}>
+                    {url ? (
+                      <Image src={url} style={s.photoImg} />
+                    ) : (
+                      <View style={s.photoEmpty}>
+                        <Text style={{ fontSize: 8, color: "#9CA3AF" }}>No photo</Text>
+                      </View>
+                    )}
+                    <Text style={s.photoLabel}>{label}</Text>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         )}
 

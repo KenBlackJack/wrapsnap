@@ -31,6 +31,7 @@ interface PdfButtonWrapperProps {
   confidence?: string | null;
   confidenceNote?: string | null;
   panels: PanelPDF[];
+  photosByPanel?: Record<string, string> | null;
 }
 
 export default function PdfButtonWrapper(props: PdfButtonWrapperProps) {

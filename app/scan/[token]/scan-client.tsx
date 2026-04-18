@@ -274,6 +274,33 @@ function Instructions({ onReady, onBack }: { onReady: () => void; onBack?: () =>
   );
 }
 
+// ─── Client-side image compression ──────────────────────────────────────────
+// Resizes to max 1920px and re-encodes as JPEG 0.85 to stay under Vercel's
+// 4.5 MB serverless body limit before uploading.
+
+async function compressImage(file: File): Promise<Blob> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const maxDim = 1920;
+      let { width, height } = img;
+      if (width > height && width > maxDim) {
+        height = (height * maxDim) / width;
+        width = maxDim;
+      } else if (height > width && height > maxDim) {
+        width = (width * maxDim) / height;
+        height = maxDim;
+      }
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => resolve(blob!), "image/jpeg", 0.85);
+    };
+  });
+}
+
 // ─── Vehicle template images — one per panel ─────────────────────────────────
 
 const PANEL_IMAGES = [
@@ -361,10 +388,13 @@ function PhotoCapture({
     setUploadError(null);
     setRejection(null);
     try {
+      // Compress before upload to stay under Vercel's 4.5 MB body limit
+      const compressed = await compressImage(preview.file);
+
       const formData = new FormData();
       formData.append("token", token);
       formData.append("panel", currentPanel);
-      formData.append("file", preview.file);
+      formData.append("file", new File([compressed], "photo.jpg", { type: "image/jpeg" }));
 
       const res = await fetch("/api/upload", { method: "POST", body: formData });
 

@@ -18,6 +18,8 @@ export interface GeneratePDFOptions {
   confidence?: string | null;
   confidenceNote?: string | null;
   panels: PanelPDF[];
+  /** Map of panel slug → URL (signed Supabase URL). react-pdf fetches these at render time. */
+  photosByPanel?: Record<string, string> | null;
 }
 
 /**
@@ -39,6 +41,7 @@ export async function generatePDF(opts: GeneratePDFOptions): Promise<Buffer> {
       confidence={opts.confidence}
       confidenceNote={opts.confidenceNote}
       panels={opts.panels}
+      photosByPanel={opts.photosByPanel}
     />
   );
   return renderToBuffer(doc);

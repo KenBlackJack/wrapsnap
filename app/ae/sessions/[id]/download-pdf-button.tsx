@@ -14,6 +14,7 @@ interface DownloadPDFButtonProps {
   confidence?: string | null;
   confidenceNote?: string | null;
   panels: PanelPDF[];
+  photosByPanel?: Record<string, string> | null;
 }
 
 export default function DownloadPDFButton({
@@ -27,6 +28,7 @@ export default function DownloadPDFButton({
   confidence,
   confidenceNote,
   panels,
+  photosByPanel,
 }: DownloadPDFButtonProps) {
   const logoUrl = `${window.location.origin}/images/WrapSnap_Logo_Horizontal_LG.jpg`;
   const fileName = `WrapSnap-Estimate-${clientName.replace(/[^a-zA-Z0-9]+/g, "-")}.pdf`;
@@ -46,6 +48,7 @@ export default function DownloadPDFButton({
           confidence={confidence}
           confidenceNote={confidenceNote}
           panels={panels}
+          photosByPanel={photosByPanel}
         />
       }
       fileName={fileName}
