@@ -7,7 +7,9 @@ type SessionStatus = "pending" | "active" | "complete" | "expired" | "archived";
 
 export interface AdminSession {
   id: string;
+  token: string;
   client_name: string;
+  client_phone: string | null;
   vehicle_description: string | null;
   created_by: string;
   status: SessionStatus;
@@ -21,6 +23,11 @@ const STATUS_STYLES: Record<SessionStatus, string> = {
   expired:  "bg-red-100 text-red-700",
   archived: "bg-gray-100 text-gray-500",
 };
+
+function isSelfScanSession(phone: string | null): boolean {
+  const p = (phone ?? "").trim();
+  return !p || p === "0000000000";
+}
 
 function firstNameFromEmail(email: string): string {
   const local = email.split("@")[0];
@@ -47,6 +54,7 @@ function SessionCard({
   showAE: boolean;
   onRemove: (id: string) => void;
 }) {
+  const inProgress = isSelfScanSession(s.client_phone) && s.status === "pending";
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -85,11 +93,15 @@ function SessionCard({
             <p className="text-xs text-gray-400 mt-0.5">by {firstNameFromEmail(s.created_by)}</p>
           )}
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <span
-              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[s.status]}`}
-            >
-              {s.status}
-            </span>
+            {inProgress ? (
+              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700">
+                In Progress
+              </span>
+            ) : (
+              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[s.status]}`}>
+                {s.status}
+              </span>
+            )}
             <span className="text-xs text-gray-400">{formatDate(s.created_at)}</span>
           </div>
         </div>

@@ -196,9 +196,15 @@ export default async function SessionDetailPage({
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap justify-end">
-              <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium capitalize ${STATUS_STYLES[status]}`}>
-                {status}
-              </span>
+              {isSelfScan && status === "pending" ? (
+                <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-yellow-100 text-yellow-700">
+                  In Progress
+                </span>
+              ) : (
+                <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium capitalize ${STATUS_STYLES[status]}`}>
+                  {status}
+                </span>
+              )}
               {canArchive && (
                 <form action={archiveSession}>
                   <button
@@ -222,6 +228,26 @@ export default async function SessionDetailPage({
             </div>
           </dl>
         </div>
+
+        {/* Resume Scan — for interrupted self-scan sessions */}
+        {isSelfScan && status === "pending" && (
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <p className="text-sm text-gray-500 mb-4">
+              This scan was started but not finished. Jump back in to complete it.
+            </p>
+            <Link
+              href={`/scan/${session.token}?ae=1`}
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2"
+              style={{ backgroundColor: "#007BBA" }}
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+              </svg>
+              Resume Scan
+            </Link>
+          </div>
+        )}
 
         {/* Scan link + PIN — only for pending client-invite sessions.
             Hidden for self-scan sessions (no real phone) and once

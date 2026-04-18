@@ -7,7 +7,9 @@ type SessionStatus = "pending" | "active" | "complete" | "expired" | "archived";
 
 export interface DashboardSession {
   id: string;
+  token: string;
   client_name: string;
+  client_phone: string | null;
   vehicle_description: string | null;
   created_by: string;
   status: SessionStatus;
@@ -21,6 +23,12 @@ const STATUS_STYLES: Record<SessionStatus, string> = {
   expired:  "bg-red-100 text-red-700",
   archived: "bg-gray-100 text-gray-500",
 };
+
+/** True when the session was created by an AE scanning on-site (no real client phone). */
+function isSelfScanSession(phone: string | null): boolean {
+  const p = (phone ?? "").trim();
+  return !p || p === "0000000000";
+}
 
 function firstNameFromEmail(email: string): string {
   const local = email.split("@")[0];
@@ -71,6 +79,8 @@ function SessionCard({
     }
   }
 
+  const inProgress = isSelfScanSession(s.client_phone) && s.status === "pending";
+
   return (
     <>
       <li className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
@@ -82,17 +92,30 @@ function SessionCard({
           )}
           <p className="text-xs text-gray-400 mt-0.5">by {firstNameFromEmail(s.created_by)}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <span
-              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[s.status]}`}
-            >
-              {s.status}
-            </span>
+            {inProgress ? (
+              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700">
+                In Progress
+              </span>
+            ) : (
+              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[s.status]}`}>
+                {s.status}
+              </span>
+            )}
             <span className="text-xs text-gray-400">{formatDate(s.created_at)}</span>
           </div>
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {inProgress && (
+            <Link
+              href={`/scan/${s.token}?ae=1`}
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-white transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-1"
+              style={{ backgroundColor: "#007BBA" }}
+            >
+              Resume
+            </Link>
+          )}
           <Link
             href={`/ae/sessions/${s.id}`}
             className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-1"

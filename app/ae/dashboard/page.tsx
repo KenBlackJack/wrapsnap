@@ -43,7 +43,7 @@ export default async function DashboardPage() {
   // Issue 3 — query: show sessions within the last 30 days OR not archived
   const { data: wrapSessions } = await supabase
     .from("sessions")
-    .select("id, client_name, vehicle_description, created_by, status, created_at")
+    .select("id, token, client_name, client_phone, vehicle_description, created_by, status, created_at")
     .eq("created_by", userEmail)
     .or(`created_at.gte.${thirtyDaysAgo},status.neq.archived`)
     .order("created_at", { ascending: false });

@@ -22,7 +22,7 @@ export default async function AdminPage() {
   // Fetch ALL sessions across all AEs, sorted by AE then most-recent first
   const { data: sessions, error } = await supabase
     .from("sessions")
-    .select("id, client_name, vehicle_description, created_by, status, created_at")
+    .select("id, token, client_name, client_phone, vehicle_description, created_by, status, created_at")
     .order("created_by", { ascending: true })
     .order("created_at", { ascending: false });
 
