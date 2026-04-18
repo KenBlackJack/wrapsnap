@@ -6,4 +6,4 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Git workflow
 
-Always commit and push directly to `main`. Never create feature branches or worktrees. All changes go straight to `main`.
+Always commit and push directly to `main`. Never create feature branches, worktrees, or pull requests. All changes go straight to `main` with no review step.
