@@ -7,6 +7,7 @@ import { getSupabaseClient } from "@/lib/supabase";
 import CopyLink from "./copy-link";
 import PinReveal from "./pin-reveal";
 import AnnotatedPhoto, { type VinylZone } from "./annotated-photo";
+import PdfButtonWrapper from "./pdf-button-wrapper";
 
 export const dynamic = "force-dynamic";
 
@@ -285,17 +286,31 @@ export default async function SessionDetailPage({
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-base font-semibold text-gray-900">Estimate Results</h2>
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                  estimate.confidence === "high"
-                    ? "bg-green-100 text-green-700"
-                    : estimate.confidence === "medium"
-                    ? "bg-yellow-100 text-yellow-700"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                {estimate.confidence} confidence
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                    estimate.confidence === "high"
+                      ? "bg-green-100 text-green-700"
+                      : estimate.confidence === "medium"
+                      ? "bg-yellow-100 text-yellow-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {estimate.confidence} confidence
+                </span>
+                <PdfButtonWrapper
+                  clientName={session.client_name}
+                  vehicleDescription={session.vehicle_description}
+                  vehicleType={estimate.vehicle_type}
+                  sessionDate={session.created_at}
+                  totalSqft={estimate.total_sqft}
+                  sqftLow={estimate.sqft_low}
+                  sqftHigh={estimate.sqft_high}
+                  confidence={estimate.confidence}
+                  confidenceNote={estimate.confidence_note}
+                  panels={(estimate.panels as import("@/components/EstimatePDF").PanelPDF[]) ?? []}
+                />
+              </div>
             </div>
 
             {/* Summary */}
