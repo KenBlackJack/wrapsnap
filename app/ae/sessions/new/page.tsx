@@ -61,7 +61,9 @@ export default function NewSessionPage() {
             </Link>
 
             <div className="flex flex-col justify-center">
-              <img src="/images/WrapSnap_Logo_Horizontal_SM.jpg" alt="WrapSnap" className="h-10 w-auto object-contain" />
+              <Link href="/ae/dashboard">
+                <img src="/images/WrapSnap_Logo_Horizontal_SM.jpg" alt="WrapSnap" className="h-10 w-auto object-contain cursor-pointer" />
+              </Link>
               <p className="text-[11px] mt-0.5" style={{ color: "#004876" }}>Powered by Advertising Vehicles</p>
             </div>
           </div>
