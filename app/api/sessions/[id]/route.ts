@@ -5,22 +5,41 @@ import { getSupabaseClient } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
-const ADMIN_DOMAINS = ["@advertisingvehicles.com", "@est03.com"];
-
-/** Fetch session and verify the caller is allowed to mutate it. */
+/** Fetch session and verify the caller is the owner or an admin. */
 async function resolveSession(id: string, userEmail: string) {
   const supabase = getSupabaseClient();
-  const { data: session, error } = await supabase
-    .from("sessions")
-    .select("id, created_by, token")
-    .eq("id", id)
-    .single();
 
-  if (error || !session) return { session: null, allowed: false, supabase };
+  const [sessionRes, adminRes] = await Promise.all([
+    supabase.from("sessions").select("id, created_by, token, status").eq("id", id).single(),
+    supabase.from("admin_users").select("email").eq("email", userEmail).maybeSingle(),
+  ]);
 
-  const isAdmin = ADMIN_DOMAINS.some((d) => userEmail.endsWith(d));
+  const session = sessionRes.data;
+  if (sessionRes.error || !session) return { session: null, allowed: false, supabase };
+
+  const isAdmin = !!adminRes.data;
   const isOwner = session.created_by === userEmail;
   return { session, allowed: isAdmin || isOwner, supabase };
+}
+
+// ── GET /api/sessions/[id] — lightweight status poll ─────────────────────────
+
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const authSession = await getServerSession(authOptions);
+  if (!authSession?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const { session, allowed } = await resolveSession(id, authSession.user.email);
+
+  if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  return NextResponse.json({ status: session.status });
 }
 
 // ── PATCH /api/sessions/[id] — archive ────────────────────────────────────────

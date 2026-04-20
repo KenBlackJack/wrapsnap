@@ -9,17 +9,19 @@ import { type VinylZone } from "./annotated-photo";
 import PdfButtonWrapper from "./pdf-button-wrapper";
 import PhotoGrid from "./photo-grid";
 import type { PhotoPanel } from "./photo-grid";
+import ProcessingPoller from "./processing-poller";
 
 export const dynamic = "force-dynamic";
 
-type SessionStatus = "pending" | "active" | "complete" | "expired" | "archived";
+type SessionStatus = "pending" | "active" | "complete" | "expired" | "archived" | "processing";
 
 const STATUS_STYLES: Record<SessionStatus, string> = {
-  pending:  "bg-gray-100 text-gray-600",
-  active:   "bg-blue-100 text-blue-700",
-  complete: "bg-green-100 text-green-700",
-  expired:  "bg-red-100 text-red-700",
-  archived: "bg-gray-100 text-gray-500",
+  pending:    "bg-gray-100 text-gray-600",
+  active:     "bg-blue-100 text-blue-700",
+  complete:   "bg-green-100 text-green-700",
+  expired:    "bg-red-100 text-red-700",
+  archived:   "bg-gray-100 text-gray-500",
+  processing: "bg-purple-100 text-purple-700",
 };
 
 const PANELS = [
@@ -433,6 +435,42 @@ export default async function SessionDetailPage({
                 {estimate.confidence_note ?? "No additional notes."}
               </p>
             </div>
+          </div>
+        ) : status === "processing" ? (
+          /* Estimation running in background — poll until complete */
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                   style={{ backgroundColor: "#EBF5FB" }}>
+                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"
+                     style={{ color: "#007BBA" }}>
+                  <circle className="opacity-25" cx="12" cy="12" r="10"
+                          stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Estimate in progress…</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Claude is measuring the vehicle. This page will update automatically when ready.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-1.5">
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  className="h-1.5 flex-1 rounded-full animate-pulse"
+                  style={{
+                    backgroundColor: "#007BBA",
+                    opacity: 0.3 + i * 0.3,
+                    animationDelay: `${i * 0.2}s`,
+                  }}
+                />
+              ))}
+            </div>
+            <ProcessingPoller sessionId={session.id} />
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center">

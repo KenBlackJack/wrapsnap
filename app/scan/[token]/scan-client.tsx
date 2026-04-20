@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -606,11 +606,14 @@ function Submission({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? `Estimate failed (${res.status})`);
+      // 202 = accepted and processing in background — this is the happy path
+      // 200 = legacy synchronous success (kept for backwards compat)
+      if (res.status === 202 || res.status === 200) {
+        onComplete();
+        return;
       }
-      onComplete();
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error ?? `Submission failed (${res.status})`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong. Please try again.";
       setSubmitError(msg);
@@ -622,11 +625,11 @@ function Submission({
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-5 p-6">
         <div
-          className="h-14 w-14 rounded-full border-4 border-t-transparent animate-spin"
+          className="h-14 w-14 rounded-full border-4 animate-spin"
           style={{ borderColor: "#007BBA", borderTopColor: "transparent" }}
         />
-        <p className="text-lg font-medium text-gray-700">Measuring your vehicle…</p>
-        <p className="text-sm text-gray-400">This takes about 30 seconds.</p>
+        <p className="text-lg font-medium text-gray-700">Submitting photos…</p>
+        <p className="text-sm text-gray-400">Just a moment.</p>
       </div>
     );
   }
@@ -673,20 +676,47 @@ function Submission({
 
 // ─── STATE 5: Complete ────────────────────────────────────────────────────────
 
-function Complete() {
+function Complete({ isAE }: { isAE: boolean }) {
+  const router = useRouter();
+
+  // AE self-scan: redirect to dashboard after 2 s so they can see the session
+  // update when the estimate arrives.
+  useEffect(() => {
+    if (!isAE) return;
+    const t = setTimeout(() => router.push("/ae/dashboard"), 2000);
+    return () => clearTimeout(t);
+  }, [isAE, router]);
+
+  const checkmark = (
+    <div
+      className="mb-6 flex h-20 w-20 items-center justify-center rounded-full"
+      style={{ backgroundColor: "#EBF5FB" }}
+    >
+      <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#007BBA">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+      </svg>
+    </div>
+  );
+
+  if (isAE) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
+        {checkmark}
+        <h1 className="text-2xl font-bold text-gray-900 mb-3">Scan complete!</h1>
+        <p className="text-gray-500 max-w-xs leading-relaxed">
+          Estimate in progress — we&apos;ll email you when it&apos;s ready.
+        </p>
+        <p className="mt-5 text-sm text-gray-400">Returning to dashboard…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
-      <div
-        className="mb-6 flex h-20 w-20 items-center justify-center rounded-full"
-        style={{ backgroundColor: "#EBF5FB" }}
-      >
-        <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#007BBA">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-        </svg>
-      </div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-3">All done!</h1>
+      {checkmark}
+      <h1 className="text-3xl font-bold text-gray-900 mb-3">Photos submitted!</h1>
       <p className="text-gray-500 max-w-xs leading-relaxed">
-        Your Advertising Vehicles representative will have your estimate shortly.
+        Your estimate is being generated and will be ready shortly. Your Account Executive will be in touch.
       </p>
     </div>
   );
@@ -734,5 +764,5 @@ export default function ScanClient({ token, isAE }: { token: string; isAE: boole
     );
   }
 
-  return <Complete />;
+  return <Complete isAE={isAE} />;
 }

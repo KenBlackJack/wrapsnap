@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-type SessionStatus = "pending" | "active" | "complete" | "expired" | "archived";
+type SessionStatus = "pending" | "active" | "complete" | "expired" | "archived" | "processing";
 
 export interface DashboardSession {
   id: string;
@@ -17,11 +17,12 @@ export interface DashboardSession {
 }
 
 const STATUS_STYLES: Record<SessionStatus, string> = {
-  pending:  "bg-gray-100 text-gray-600",
-  active:   "bg-blue-100 text-blue-700",
-  complete: "bg-green-100 text-green-700",
-  expired:  "bg-red-100 text-red-700",
-  archived: "bg-gray-100 text-gray-500",
+  pending:    "bg-gray-100 text-gray-600",
+  active:     "bg-blue-100 text-blue-700",
+  complete:   "bg-green-100 text-green-700",
+  expired:    "bg-red-100 text-red-700",
+  archived:   "bg-gray-100 text-gray-500",
+  processing: "bg-purple-100 text-purple-700",
 };
 
 /** True when the session was created by an AE scanning on-site (no real client phone). */
@@ -92,7 +93,12 @@ function SessionCard({
           )}
           <p className="text-xs text-gray-400 mt-0.5">by {firstNameFromEmail(s.created_by)}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            {inProgress ? (
+            {s.status === "processing" ? (
+              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-pulse" />
+                Estimating…
+              </span>
+            ) : inProgress ? (
               <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700">
                 In Progress
               </span>

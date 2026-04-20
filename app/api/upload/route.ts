@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     console.error("Upload: session lookup failed", { token, sessionError });
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
-  if (session.status === "expired" || session.status === "complete") {
+  if (session.status === "expired" || session.status === "complete" || session.status === "processing") {
     console.error("Upload: session closed", { token, status: session.status });
     return NextResponse.json({ error: `Session is ${session.status}` }, { status: 403 });
   }
