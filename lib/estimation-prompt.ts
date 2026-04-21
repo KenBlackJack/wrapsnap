@@ -101,15 +101,36 @@ VERIFIED EXAMPLE:
   Five Star navy side panels: 191.1" × 29.4" = 39.02 sq ft — ONE entry covering both sides.
   NOT: 191" × 29" × qty 2 = 78 sq ft ✗
 
+STACKED STRIPE RULE:
+When a vehicle has identical parallel stripes running the length of the vehicle (e.g. two blue stripes stacked one above the other), they are produced as ONE combined panel — not two separate entries. The combined panel height = total height of both stripes together.
+
+How to measure:
+  - Identify all parallel stripes of the same color running the same length
+  - Combined height = sum of all stripe heights (including any narrow gap between them if they are produced as one piece)
+  - Report as one entry: length × combined_height ÷ 144
+
+VERIFIED EXAMPLE:
+  Impact Fire side stripes: two blue stripes each ~14" tall running 177" long.
+  Combined panel: 177" × 28" = 177×28÷144 = 34.42 sq ft — ONE entry.
+  NOT: two entries at 177" × 14" each ✗
+  NOT: measuring only one stripe at 177" × 10" = 12.3 sq ft ✗
+
 ARTBOARD 3 — Printed Vinyl (full wraps only)
 ─────────────────────────────────────────────
 Large-format full-coverage panels: full vehicle wraps, full rear door wraps, full hood wraps. These require printing multiple 52"-wide strips and installing them with overlap across a large surface.
 
 Calculate the FULL PANEL rectangle — do NOT subtract where A1 items sit on top.
 
+MULTI-COLOR LOGO CLASSIFICATION RULE:
+If a logo or icon contains multiple colors (e.g. a red+blue flame, a multi-color shield, a gradient logo):
+  - Discrete logo element placed on the vehicle body → A1 Cut Vinyl with Premask
+  - Large background panel covering a significant vehicle surface area → A3 Printed Vinyl
+  Do NOT put a discrete multi-color logo in A2. A2 is for bounded accent panels, not logos.
+  EXAMPLE: Impact Fire flame logos (red+blue flames) are discrete logo elements → A1, not A2.
+
 CLASSIFICATION DECISION GUIDE:
   Text of any size → Artboard 1
-  Cut-able logo/icon → Artboard 1
+  Single-color or multi-color discrete logo/icon → Artboard 1
   Bounded accent panel (stripe, block, even with starburst/gradient inside it) → Artboard 2
   Full-coverage vehicle surface wrap → Artboard 3
   Full rear door wrap → Artboard 3 + text/logos → Artboard 1
@@ -155,8 +176,8 @@ ARTBOARD 1 — full sheet rectangle:
   ARTBOARD 1 HEIGHT CALCULATION — REQUIRED STEPS:
   a. List every group with its estimated dimensions (width × height).
   b. Sum all group heights: total_group_height = sum of every individual group's height_in
-  c. Add spacing between groups: spacing = (number_of_groups − 1) × 2"
-  d. Add top and bottom margins: margins = 4"
+  c. Add spacing between groups: spacing = (number_of_groups − 1) × 1"
+  d. Add top and bottom margins: margins = 2"  (1" top + 1" bottom)
   e. artboard_height_in = total_group_height + spacing + margins
   f. sqft = (artboard_width_in × artboard_height_in) ÷ 144
 
@@ -165,10 +186,10 @@ ARTBOARD 1 — full sheet rectangle:
 
   Example (Five Star ProMaster):
     Groups heights: 32 + 32 + 10 + 38 + 16 + 10 + 4 = 142"
-    Spacing (6 gaps × 2"): 12"
-    Margins: 4"
-    artboard_height_in = 142 + 12 + 4 = 158"
-    sqft = (52 × 158) ÷ 144 = 57.0 sq ft
+    Spacing (6 gaps × 1"): 6"
+    Margins: 2"
+    artboard_height_in = 142 + 6 + 2 = 150"
+    sqft = (52 × 150) ÷ 144 = 54.2 sq ft
 
   Note: AVI's design team may achieve a more efficient layout (rotating/nesting groups).
   WrapSnap's conservative portrait layout may be slightly larger — this is acceptable.
