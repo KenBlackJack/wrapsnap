@@ -52,7 +52,22 @@ All cut-able logos and icons (single or limited colors).
 
 GROUPING RULE: Items appearing together as one visual unit = ONE group. Logo + name + stars = one group. Internal spacing preserved.
 
+CROSS-SIDE GROUPING RULE:
+When the same graphic appears on both driver and passenger sides, lay BOTH out together as ONE artboard entry — not two separate entries. This halves the artboard height for symmetric elements.
+  Example: "IMPACT FIRE" large text on both sides → one entry "IMPACT FIRE text — both sides" at ~86"×21", NOT two entries at ~42"×18" each.
+
 Items installed ON TOP of a printed wrap still go on Artboard 1 (second vinyl layer on vehicle).
+
+FULL WRAP VEHICLE RULE:
+If the vehicle has a full-coverage printed wrap (A3 panels covering most of the vehicle):
+  - Logos, company names, and taglines that are part of the wrap design → PRINTED (A3), already included in the wrap panel rectangle. Do NOT add them to A1.
+  - A1 on a full wrap vehicle should be SMALL — typically under 15 sq ft.
+  - Only add to A1: unit numbers, license numbers, DOT numbers, regulatory text that is a discrete separate layer applied on top of the wrap after installation.
+  - If A1 exceeds 20 sq ft on a full wrap vehicle, you are incorrectly including printed elements.
+
+Verified example — Affordable Air Express (full wrap):
+  A1 actual: 10.36 sq ft — only the Cut Vinyl Kit (8.48) + Unit Numbers (1.88).
+  The Affordable Air logo, BrightSolutions logo, and tagline are all printed INTO the wrap → A3, not A1.
 
 ARTBOARD 2 — Large Cut Panels
 ───────────────────────────────
@@ -64,6 +79,7 @@ Goes here:
 
 Does NOT go here:
   - Full-coverage wraps that span large vehicle panel areas requiring multiple overlapping strip installations
+  - Stripes or panels you cannot clearly see in the photos — only include elements with visual confirmation. Do not infer a rear stripe from a side stripe unless it is clearly visible on the rear doors.
 
 LARGE CUT PANEL SIZING RULE — CRITICAL:
 When measuring an Artboard 2 panel, estimate the FULL PANEL RECTANGLE — not just the area where graphic content is clustered.
@@ -245,7 +261,8 @@ Total: 72.37 sq ft
   Artboard 2 — Large Cut Panels:
     Side Strip: 177" × 28" = 177×28÷144 = 34.42 sq ft
     [Two blue stripes laid as one 177"×28" rectangle, cut in half after printing.
-     NOTE: black plastic lower cladding NOT included — that is vehicle body, not vinyl.]
+     NOTE: black plastic lower cladding NOT included — that is vehicle body, not vinyl.
+     NOTE: SIDES ONLY — there is NO blue stripe on the rear doors. Do not add a rear entry.]
 
   Artboard 3 — Nothing (no printed vinyl on this vehicle)
 
@@ -256,6 +273,9 @@ Total: 292.67 sq ft
     Cut Vinyl Kit: 37" × 33" = 37×33÷144 = 8.48 sq ft  (phone numbers, websites, license numbers)
     Unit Numbers:  18" × 15" = 18×15÷144 = 1.88 sq ft
     Total A1: ~10.36 sq ft
+    [FULL WRAP RULE IN ACTION: The Affordable Air logo, BrightSolutions logo, and tagline
+     "Where Affordability Meets Integrity" are PRINTED INTO the wrap — they are NOT in A1.
+     A1 is small (10.36 sq ft) because this is a full wrap vehicle.]
 
   Artboard 2 — Nothing (full wrap vehicle, no bounded accent panels)
 
