@@ -14,6 +14,7 @@ import type {
   Artboard2Data,
   Artboard3Data,
 } from "@/components/EstimatePDF";
+import type { GroupBBox } from "./annotated-photo";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,7 @@ interface EstimateArtboards {
   artboard1?: Artboard1Data | null;
   artboard2?: Artboard2Data | null;
   artboard3?: Artboard3Data | null;
+  groups_bbox?: GroupBBox[] | null;
 }
 
 export default async function SessionDetailPage({
@@ -263,7 +265,7 @@ export default async function SessionDetailPage({
               slug,
               label,
               imageUrl: uploadsBySlug[slug] ?? null,
-              zones: [],
+              groupsBbox: (artboards?.groups_bbox ?? []).filter((g) => g.panel === slug),
             }))}
           />
         </div>
@@ -431,27 +433,32 @@ export default async function SessionDetailPage({
                   <div className="flex items-center px-4 py-2 bg-orange-50">
                     <span className="text-xs font-medium text-orange-700">52"-wide strips · full panel rectangles · includes area under cut vinyl</span>
                   </div>
-                  {(artboards.artboard3.panels ?? []).map((panel, pi) => (
-                    <div key={pi} className="flex items-center justify-between px-4 py-2.5 bg-white">
-                      <div className="min-w-0 flex-1 pr-3">
-                        <p className="font-medium text-gray-900 text-sm">{panel.name}</p>
-                        {panel.panel_width_in != null && panel.panel_height_in != null && (
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {panel.panel_width_in}" × {panel.panel_height_in}"
-                            {panel.strips_needed != null && ` · ${panel.strips_needed} strip${panel.strips_needed !== 1 ? "s" : ""}`}
-                          </p>
-                        )}
+                  {(artboards.artboard3.panels ?? []).map((panel, pi) => {
+                    const graphicSqft = panel.panel_sqft ?? panel.total_sqft;
+                    return (
+                      <div key={pi} className="flex items-center justify-between px-4 py-2.5 bg-white">
+                        <div className="min-w-0 flex-1 pr-3">
+                          <p className="font-medium text-gray-900 text-sm">{panel.name}</p>
+                          {panel.panel_width_in != null && panel.panel_height_in != null && (
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {panel.panel_width_in}" × {panel.panel_height_in}"
+                              {panel.strips_needed != null && ` · ${panel.strips_needed} strip${panel.strips_needed !== 1 ? "s" : ""}`}
+                            </p>
+                          )}
+                          {panel.material_sqft != null && (
+                            <p className="text-xs text-gray-400">
+                              material: {panel.material_sqft.toFixed(1)} sq ft
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          {graphicSqft != null && (
+                            <p className="text-xs font-semibold" style={{ color: "#C2410C" }}>{graphicSqft.toFixed(1)} sq ft</p>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        {panel.sqft_per_strip != null && (
-                          <p className="text-xs text-gray-500">{panel.sqft_per_strip.toFixed(1)} sq ft/strip</p>
-                        )}
-                        {panel.total_sqft != null && (
-                          <p className="text-xs font-semibold" style={{ color: "#C2410C" }}>{panel.total_sqft.toFixed(1)} sq ft</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

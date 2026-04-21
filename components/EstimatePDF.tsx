@@ -44,7 +44,10 @@ export interface Artboard3Panel {
   name: string;
   panel_width_in?: number | null;
   panel_height_in?: number | null;
-  strips_needed?: number | null;
+  panel_sqft?: number | null;       // graphic area = width × height ÷ 144
+  strips_needed?: number | null;    // informational: ceil(width ÷ 52)
+  material_sqft?: number | null;    // actual material = strips × 52 × height ÷ 144
+  // backward compat
   sqft_per_strip?: number | null;
   total_sqft?: number | null;
 }
@@ -52,7 +55,8 @@ export interface Artboard3Panel {
 export interface Artboard3Data {
   label?: string | null;
   panels?: Artboard3Panel[] | null;
-  total_sqft?: number | null;
+  total_sqft?: number | null;          // sum of panel_sqft (graphic areas)
+  total_material_sqft?: number | null; // sum of material_sqft (actual material)
 }
 
 // PanelPDF kept for backward compatibility with old estimates
@@ -358,6 +362,34 @@ export default function EstimatePDFDocument({
                 </View>
               )}
             </View>
+            {/* Layout diagram */}
+            {(artboard1.groups ?? []).length > 0 && (
+              <View style={{ marginTop: 6, marginBottom: 2 }}>
+                <Text style={[s.sectionTitle, { fontSize: 7, color: GRAY_TEXT, marginBottom: 4 }]}>
+                  ARTBOARD LAYOUT — 52" wide × {artboard1.artboard_height_in ?? "?"}" tall
+                </Text>
+                <View style={{ backgroundColor: "#F3F4F6", borderWidth: 1, borderColor: "#D1D5DB", borderRadius: 4, padding: 4 }}>
+                  {(artboard1.groups ?? []).map((group, gi) => {
+                    const pct = group.width_in ? Math.min(Math.round((group.width_in / 52) * 100), 100) : 40;
+                    const hPts = group.height_in ? Math.max(group.height_in * 2.5, 11) : 11;
+                    return (
+                      <View key={gi} style={{ marginBottom: gi < (artboard1.groups?.length ?? 0) - 1 ? 3 : 0 }}>
+                        <View style={{ width: `${pct}%`, minWidth: 30, height: hPts, backgroundColor: "#DBEAFE", borderWidth: 0.75, borderColor: "#3B82F6", borderRadius: 2, justifyContent: "center", paddingHorizontal: 3 }}>
+                          <Text style={{ fontSize: 6, color: "#1D4ED8" }}>
+                            {group.name}{group.width_in && group.height_in ? `  ${group.width_in}"×${group.height_in}"` : ""}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                  <View style={{ marginTop: 4, borderTopWidth: 0.5, borderTopColor: "#D1D5DB", paddingTop: 2 }}>
+                    <Text style={{ fontSize: 6, color: "#9CA3AF", textAlign: "center" }}>
+                      ← 52" usable width (3M 180CV3) →
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
         )}
 
@@ -413,7 +445,10 @@ export default function EstimatePDFDocument({
               <View style={[s.artboardHead, s.artboardHeadAlt2]}>
                 <View>
                   <Text style={[s.artboardLabel, { color: "#9A3412" }]}>Printed Vinyl</Text>
-                  <Text style={s.artboardDims}>52"-wide strips, full panel rectangles</Text>
+                  <Text style={s.artboardDims}>
+                    Graphic area: {artboard3.total_sqft != null ? `${artboard3.total_sqft.toFixed(1)} sq ft` : "—"}
+                    {artboard3.total_material_sqft != null ? `  ·  Material (incl. waste): ${artboard3.total_material_sqft.toFixed(1)} sq ft` : ""}
+                  </Text>
                 </View>
                 <Text style={[s.artboardSqft, { color: "#EA580C" }]}>
                   {artboard3.total_sqft != null ? `${artboard3.total_sqft.toFixed(1)} sq ft` : "—"}
@@ -421,23 +456,26 @@ export default function EstimatePDFDocument({
               </View>
               {(artboard3.panels ?? []).map((panel, pi) => {
                 const isLast = pi === (artboard3.panels?.length ?? 0) - 1;
+                const graphicSqft = panel.panel_sqft ?? panel.total_sqft;
                 return (
                   <View key={pi} style={[s.itemRow, isLast ? s.itemRowLast : {}]}>
                     <View style={{ flex: 1, paddingRight: 8 }}>
                       <Text style={s.itemName}>{panel.name}</Text>
                       {panel.panel_width_in != null && panel.panel_height_in != null && (
                         <Text style={s.itemSub}>
-                          Panel: {panel.panel_width_in}" × {panel.panel_height_in}"
+                          {panel.panel_width_in}" × {panel.panel_height_in}"
                           {panel.strips_needed != null ? `  ·  ${panel.strips_needed} strip${panel.strips_needed !== 1 ? "s" : ""}` : ""}
+                        </Text>
+                      )}
+                      {panel.material_sqft != null && (
+                        <Text style={[s.itemSub, { color: "#9CA3AF" }]}>
+                          material: {panel.material_sqft.toFixed(1)} sq ft
                         </Text>
                       )}
                     </View>
                     <View style={s.itemRight}>
-                      {panel.sqft_per_strip != null && (
-                        <Text style={s.itemDims}>{panel.sqft_per_strip.toFixed(1)} sq ft/strip</Text>
-                      )}
-                      {panel.total_sqft != null && (
-                        <Text style={s.itemSqft}>{panel.total_sqft.toFixed(1)} sq ft</Text>
+                      {graphicSqft != null && (
+                        <Text style={s.itemSqft}>{graphicSqft.toFixed(1)} sq ft</Text>
                       )}
                     </View>
                   </View>

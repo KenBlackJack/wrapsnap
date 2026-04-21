@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import AnnotatedPhoto from "./annotated-photo";
-import type { VinylZone } from "./annotated-photo";
+import type { GroupBBox } from "./annotated-photo";
 
 export interface PhotoPanel {
   slug: string;
   label: string;
   imageUrl: string | null;
-  zones: VinylZone[];
+  groupsBbox: GroupBBox[];
 }
 
 export default function PhotoGrid({ panels }: { panels: PhotoPanel[] }) {
@@ -49,12 +49,12 @@ export default function PhotoGrid({ panels }: { panels: PhotoPanel[] }) {
     <>
       {/* Thumbnail grid */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        {panels.map(({ slug, label, imageUrl, zones }) =>
+        {panels.map(({ slug, label, imageUrl, groupsBbox }) =>
           imageUrl ? (
             <div key={slug}>
               <AnnotatedPhoto
                 imageUrl={imageUrl}
-                zones={zones}
+                groupsBbox={groupsBbox}
                 panelLabel={label}
                 onOpen={() => setLightboxSlug(slug)}
               />
@@ -114,7 +114,7 @@ export default function PhotoGrid({ panels }: { panels: PhotoPanel[] }) {
           >
             <AnnotatedPhoto
               imageUrl={lightboxPanel.imageUrl!}
-              zones={lightboxPanel.zones}
+              groupsBbox={lightboxPanel.groupsBbox}
               panelLabel={lightboxPanel.label}
             />
           </div>

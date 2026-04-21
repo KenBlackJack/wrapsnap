@@ -2,56 +2,59 @@
 
 import { useEffect, useRef, useCallback } from "react";
 
-interface BBox {
-  x_pct: number;
-  y_pct: number;
-  width_pct: number;
-  height_pct: number;
+export interface GroupBBox {
+  label: string;
+  artboard: number;
+  bbox: { x: number; y: number; w: number; h: number };
+  panel: string;
 }
 
+// Keep for backward compatibility
 export interface VinylZone {
   type: "printed_wrap" | "cut_vinyl" | "review";
   name?: string;
   sqft: number;
-  bbox?: BBox;
+  bbox?: { x_pct: number; y_pct: number; width_pct: number; height_pct: number };
 }
 
 interface Props {
   imageUrl: string;
-  zones: VinylZone[];
+  groupsBbox: GroupBBox[];
   panelLabel: string;
   onOpen?: () => void;
 }
 
-function drawZoneLabel(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, fontSize: number) {
+const ARTBOARD_STYLE = {
+  1: { fill: "rgba(59, 130, 246, 0.18)",  stroke: "#3b82f6", tag: "A1" },
+  2: { fill: "rgba(234, 88, 12, 0.18)",   stroke: "#ea580c", tag: "A2" },
+  3: { fill: "rgba(22, 163, 74, 0.18)",   stroke: "#16a34a", tag: "A3" },
+} as const;
+
+function drawGroupLabel(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  fontSize: number,
+  bgColor: string,
+) {
   ctx.font = `bold ${fontSize}px sans-serif`;
   const tw = ctx.measureText(text).width;
   const pad = 4;
   const bh = fontSize + 7;
-  // Background
-  ctx.fillStyle = "rgba(0,0,0,0.6)";
+  ctx.fillStyle = bgColor;
   ctx.fillRect(x - pad, y - fontSize, tw + pad * 2, bh);
-  // Stroke for extra legibility
-  ctx.strokeStyle = "rgba(0,0,0,0.8)";
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(0,0,0,0.5)";
+  ctx.lineWidth = 2;
   ctx.lineJoin = "round";
   ctx.strokeText(text, x, y);
-  // White fill
   ctx.fillStyle = "#ffffff";
   ctx.fillText(text, x, y);
 }
 
-const ZONE_STYLE = {
-  printed_wrap: { fill: "rgba(59, 130, 246, 0.20)", stroke: "#3b82f6", label: "Printed Wrap" },
-  cut_vinyl:    { fill: "rgba(239, 68, 68, 0.20)",  stroke: "#ef4444", label: "Cut Vinyl" },
-  review:       { fill: "rgba(234, 179, 8, 0.20)",  stroke: "#eab308", label: "Review" },
-} as const;
-
-export default function AnnotatedPhoto({ imageUrl, zones, panelLabel, onOpen }: Props) {
+export default function AnnotatedPhoto({ imageUrl, groupsBbox, panelLabel, onOpen }: Props) {
   const imgRef    = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  const annotatedZones = zones.filter((z) => z.bbox);
 
   const draw = useCallback(() => {
     const img    = imgRef.current;
@@ -66,26 +69,25 @@ export default function AnnotatedPhoto({ imageUrl, zones, panelLabel, onOpen }: 
     if (!ctx) return;
     ctx.clearRect(0, 0, w, h);
 
-    for (const zone of annotatedZones) {
-      const style = ZONE_STYLE[zone.type] ?? ZONE_STYLE.review;
-      const { x_pct, y_pct, width_pct, height_pct } = zone.bbox!;
-      const x  = x_pct * w;
-      const y  = y_pct * h;
-      const bw = width_pct * w;
-      const bh = height_pct * h;
+    for (const group of groupsBbox) {
+      const style = ARTBOARD_STYLE[group.artboard as 1 | 2 | 3] ?? ARTBOARD_STYLE[1];
+      const { x, y, w: bwPct, h: bhPct } = group.bbox;
+      const px  = x * w;
+      const py  = y * h;
+      const bw  = bwPct * w;
+      const bh  = bhPct * h;
 
       ctx.fillStyle = style.fill;
-      ctx.fillRect(x, y, bw, bh);
+      ctx.fillRect(px, py, bw, bh);
 
       ctx.strokeStyle = style.stroke;
       ctx.lineWidth   = 2;
-      ctx.strokeRect(x, y, bw, bh);
+      ctx.strokeRect(px, py, bw, bh);
 
-      const zoneLabel = zone.name ?? style.label;
-      const labelText = `${zoneLabel} · ${zone.sqft.toFixed(1)} sq ft`;
-      drawZoneLabel(ctx, labelText, x + 4, y + 14, 11);
+      const fontSize = Math.round(w / 55);
+      drawGroupLabel(ctx, group.label, px + 4, py + fontSize + 4, fontSize, style.stroke + "CC");
     }
-  }, [annotatedZones]);
+  }, [groupsBbox]);
 
   useEffect(() => {
     const img = imgRef.current;
@@ -114,7 +116,6 @@ export default function AnnotatedPhoto({ imageUrl, zones, panelLabel, onOpen }: 
     try {
       ctx.drawImage(img, 0, 0);
     } catch {
-      // CORS-tainted canvas — open image directly instead
       window.open(imageUrl, "_blank");
       return;
     }
@@ -122,24 +123,23 @@ export default function AnnotatedPhoto({ imageUrl, zones, panelLabel, onOpen }: 
     const sw = img.naturalWidth;
     const sh = img.naturalHeight;
 
-    for (const zone of annotatedZones) {
-      const style = ZONE_STYLE[zone.type] ?? ZONE_STYLE.review;
-      const { x_pct, y_pct, width_pct, height_pct } = zone.bbox!;
-      const x  = x_pct * sw;
-      const y  = y_pct * sh;
-      const bw = width_pct * sw;
-      const bh = height_pct * sh;
+    for (const group of groupsBbox) {
+      const style = ARTBOARD_STYLE[group.artboard as 1 | 2 | 3] ?? ARTBOARD_STYLE[1];
+      const { x, y, w: bwPct, h: bhPct } = group.bbox;
+      const px  = x * sw;
+      const py  = y * sh;
+      const bw  = bwPct * sw;
+      const bh  = bhPct * sh;
 
       ctx.fillStyle = style.fill;
-      ctx.fillRect(x, y, bw, bh);
+      ctx.fillRect(px, py, bw, bh);
 
       ctx.strokeStyle = style.stroke;
       ctx.lineWidth   = Math.max(2, sw / 500);
-      ctx.strokeRect(x, y, bw, bh);
+      ctx.strokeRect(px, py, bw, bh);
 
-      const dlLabel = zone.name ?? style.label;
-      const dlLabelText = `${dlLabel} · ${zone.sqft.toFixed(1)} sq ft`;
-      drawZoneLabel(ctx, dlLabelText, x + 6, y + Math.round(sw / 50), Math.round(sw / 60));
+      const fontSize = Math.round(sw / 55);
+      drawGroupLabel(ctx, group.label, px + 4, py + fontSize + 4, fontSize, style.stroke + "CC");
     }
 
     let dataUrl: string;
@@ -170,7 +170,7 @@ export default function AnnotatedPhoto({ imageUrl, zones, panelLabel, onOpen }: 
           className="w-full h-full object-cover"
           crossOrigin="anonymous"
         />
-        {annotatedZones.length > 0 && (
+        {groupsBbox.length > 0 && (
           <canvas
             ref={canvasRef}
             className="absolute inset-0 w-full h-full pointer-events-none"
@@ -178,7 +178,7 @@ export default function AnnotatedPhoto({ imageUrl, zones, panelLabel, onOpen }: 
         )}
         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-3 py-2 flex items-end justify-between">
           <p className="text-white text-xs font-medium">{panelLabel}</p>
-          {annotatedZones.length > 0 && (
+          {groupsBbox.length > 0 && (
             <button
               onClick={(e) => { e.stopPropagation(); handleDownload(); }}
               className="flex items-center gap-1 text-white/80 hover:text-white text-[10px] transition"
@@ -193,21 +193,22 @@ export default function AnnotatedPhoto({ imageUrl, zones, panelLabel, onOpen }: 
         </div>
       </div>
 
-      {/* Zone legend */}
-      {annotatedZones.length > 0 && (
+      {/* Legend */}
+      {groupsBbox.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {(["printed_wrap", "cut_vinyl", "review"] as const)
-            .filter((t) => annotatedZones.some((z) => z.type === t))
-            .map((t) => {
-              const style = ZONE_STYLE[t];
+          {([1, 2, 3] as const)
+            .filter((a) => groupsBbox.some((g) => g.artboard === a))
+            .map((a) => {
+              const style = ARTBOARD_STYLE[a];
+              const labels = ["Cut Vinyl (A1)", "Large Cut (A2)", "Printed (A3)"];
               return (
                 <span
-                  key={t}
+                  key={a}
                   className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium"
                   style={{ background: style.fill, color: style.stroke, border: `1px solid ${style.stroke}` }}
                 >
                   <span className="h-2 w-2 rounded-sm inline-block" style={{ background: style.stroke }} />
-                  {style.label}
+                  {labels[a - 1]}
                 </span>
               );
             })}
