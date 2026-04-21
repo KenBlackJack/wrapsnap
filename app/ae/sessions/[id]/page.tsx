@@ -6,6 +6,7 @@ import { getSupabaseClient } from "@/lib/supabase";
 import CopyLink from "./copy-link";
 import PinReveal from "./pin-reveal";
 import PdfButtonWrapper from "./pdf-button-wrapper";
+import ReestimateButton from "./reestimate-button";
 import PhotoGrid from "./photo-grid";
 import type { PhotoPanel } from "./photo-grid";
 import ProcessingPoller from "./processing-poller";
@@ -77,6 +78,13 @@ export default async function SessionDetailPage({
     .single();
 
   if (error || !session || session.created_by !== userEmail) notFound();
+
+  const { data: adminRow } = await supabase
+    .from("admin_users")
+    .select("email")
+    .eq("email", userEmail)
+    .maybeSingle();
+  const isAdmin = !!adminRow;
 
   const { data: uploads, error: uploadsError } = await supabase
     .from("uploads")
@@ -287,6 +295,7 @@ export default async function SessionDetailPage({
                 >
                   {estimate.confidence} confidence
                 </span>
+                {isAdmin && <ReestimateButton sessionId={session.id} />}
                 <PdfButtonWrapper
                   clientName={session.client_name}
                   vehicleDescription={session.vehicle_description}
