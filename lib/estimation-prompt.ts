@@ -150,9 +150,28 @@ ARTBOARD 1 — full sheet rectangle:
   1. Lay all groups within a sheet no wider than 52". Choose width that fits most efficiently
      (can be narrower than 52" — e.g. 48" if items fit better at that width).
   2. Groups can be rotated 90° to fit better.
-  3. Stack groups with ~2" spacing between groups, ~2" top/bottom margin.
-  4. artboard_height_in = sum of group heights + (num_groups − 1) × 2" + 4" (margins)
-  5. sqft = (artboard_width_in × artboard_height_in) ÷ 144
+  3. Stack groups vertically with spacing and margins.
+
+  ARTBOARD 1 HEIGHT CALCULATION — REQUIRED STEPS:
+  a. List every group with its estimated dimensions (width × height).
+  b. Sum all group heights: total_group_height = sum of every individual group's height_in
+  c. Add spacing between groups: spacing = (number_of_groups − 1) × 2"
+  d. Add top and bottom margins: margins = 4"
+  e. artboard_height_in = total_group_height + spacing + margins
+  f. sqft = (artboard_width_in × artboard_height_in) ÷ 144
+
+  VERIFY before outputting: artboard_height_in MUST be greater than total_group_height.
+  If artboard_height_in < total_group_height, you have made an arithmetic error — recalculate.
+
+  Example (Five Star ProMaster):
+    Groups heights: 32 + 32 + 10 + 38 + 16 + 10 + 4 = 142"
+    Spacing (6 gaps × 2"): 12"
+    Margins: 4"
+    artboard_height_in = 142 + 12 + 4 = 158"
+    sqft = (52 × 158) ÷ 144 = 57.0 sq ft
+
+  Note: AVI's design team may achieve a more efficient layout (rotating/nesting groups).
+  WrapSnap's conservative portrait layout may be slightly larger — this is acceptable.
   Reports the full sheet ordered — not just the sum of individual group areas.
 
 ARTBOARD 2 — graphic area per panel:
