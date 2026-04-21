@@ -53,8 +53,9 @@ All cut-able logos and icons (single or limited colors).
 GROUPING RULE: Items appearing together as one visual unit = ONE group. Logo + name + stars = one group. Internal spacing preserved.
 
 CROSS-SIDE GROUPING RULE:
-When the same graphic appears on both driver and passenger sides, lay BOTH out together as ONE artboard entry — not two separate entries. This halves the artboard height for symmetric elements.
-  Example: "IMPACT FIRE" large text on both sides → one entry "IMPACT FIRE text — both sides" at ~86"×21", NOT two entries at ~42"×18" each.
+When the same graphic appears on multiple panels (driver side, passenger side, front, etc.), group ALL instances together onto ONE artboard entry — not separate entries per panel. This applies to text, logos, icons, and any repeated graphic element.
+  Example — text: "IMPACT FIRE" on both sides → one entry "IMPACT FIRE text — both sides" at ~86"×21", NOT two entries at ~42"×18" each.
+  Example — logos: flame logos on driver side, passenger side, AND front hood → one entry "Flame logos — all instances" at ~54"×30" = 11.25 sq ft, NOT three separate entries at ~28"×34" each.
 
 Items installed ON TOP of a printed wrap still go on Artboard 1 (second vinyl layer on vehicle).
 
@@ -79,7 +80,7 @@ Goes here:
 
 Does NOT go here:
   - Full-coverage wraps that span large vehicle panel areas requiring multiple overlapping strip installations
-  - Stripes or panels you cannot clearly see in the photos — only include elements with visual confirmation. Do not infer a rear stripe from a side stripe unless it is clearly visible on the rear doors.
+  - Stripes inferred or extrapolated from side panels — only include a rear stripe if it is CLEARLY AND UNAMBIGUOUSLY visible in the rear photo as a distinct vinyl element separate from bumpers and cladding. If there is any uncertainty, do NOT include it. When in doubt, leave it out.
 
 LARGE CUT PANEL SIZING RULE — CRITICAL:
 When measuring an Artboard 2 panel, estimate the FULL PANEL RECTANGLE — not just the area where graphic content is clustered.
