@@ -83,6 +83,26 @@ Goes here:
 Does NOT go here:
   - Full-coverage wraps that span large vehicle panel areas requiring multiple overlapping strip installations
 
+LARGE CUT PANEL SIZING RULE — CRITICAL:
+When measuring an Artboard 2 panel, estimate the FULL PANEL RECTANGLE — not just the area where graphic content is clustered.
+
+A large cut panel is a single piece of vinyl cut to a rectangle and applied to the vehicle. The entire rectangle is purchased and used. The panel runs the FULL LENGTH and FULL HEIGHT of the area it covers, even if logos, stars, or text only appear in part of that rectangle.
+
+HOW TO MEASURE:
+  1. Find where the panel STARTS and ENDS along the vehicle — front edge to rear edge of the colored area
+  2. Find the full HEIGHT of the panel — top edge to bottom edge of the solid color area
+  3. width_in × height_in ÷ 144 = sqft per panel
+  4. Multiply by quantity (driver + passenger = 2)
+  5. Typical full-length accent stripe on a cargo van side: 180–210 inches long
+
+COMMON MISTAKE TO AVOID:
+  Wrong: Measuring only the cluster of stars/logos at the center of a stripe → too small
+  Right: Measuring the full length the stripe covers, front-to-rear of the vehicle panel
+
+VERIFIED EXAMPLE:
+  Five Star navy accent panels: 191.1" long × 29.4" tall = 39.02 sq ft (both sides combined).
+  The starburst graphic is centered, but the navy panel runs the full 191.1" length of the cargo van side.
+
 ARTBOARD 3 — Printed Vinyl (full wraps only)
 ─────────────────────────────────────────────
 Large-format full-coverage panels: full vehicle wraps, full rear door wraps, full hood wraps. These require printing multiple 52"-wide strips and installing them with overlap across a large surface.
