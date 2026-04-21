@@ -1,9 +1,11 @@
 import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
-import EstimatePDFDocument, { type PanelPDF } from "@/components/EstimatePDF";
+import EstimatePDFDocument, {
+  type Artboard1Data,
+  type Artboard2Data,
+  type Artboard3Data,
+} from "@/components/EstimatePDF";
 
-// Use the absolute production URL so react-pdf can fetch the image from the network.
-// renderToBuffer runs server-side and needs a full URL, not a relative path.
 const LOGO_URL =
   "https://wrapsnap.advertisingvehicles.com/images/WrapSnap_Logo_Horizontal_SM.jpg";
 
@@ -13,20 +15,14 @@ export interface GeneratePDFOptions {
   vehicleType?: string | null;
   sessionDate: string;
   totalSqft?: number | null;
-  sqftLow?: number | null;
-  sqftHigh?: number | null;
   confidence?: string | null;
   confidenceNote?: string | null;
-  panels: PanelPDF[];
-  /** Map of panel slug → URL (signed Supabase URL). react-pdf fetches these at render time. */
+  artboard1?: Artboard1Data | null;
+  artboard2?: Artboard2Data | null;
+  artboard3?: Artboard3Data | null;
   photosByPanel?: Record<string, string> | null;
 }
 
-/**
- * Renders the WrapSnap estimate as a PDF and returns the raw bytes.
- * Intended for server-side use only (API routes, server actions).
- * Uses renderToBuffer from @react-pdf/renderer — NOT PDFDownloadLink.
- */
 export async function generatePDF(opts: GeneratePDFOptions): Promise<Buffer> {
   const doc = (
     <EstimatePDFDocument
@@ -36,11 +32,11 @@ export async function generatePDF(opts: GeneratePDFOptions): Promise<Buffer> {
       vehicleType={opts.vehicleType}
       sessionDate={opts.sessionDate}
       totalSqft={opts.totalSqft}
-      sqftLow={opts.sqftLow}
-      sqftHigh={opts.sqftHigh}
       confidence={opts.confidence}
       confidenceNote={opts.confidenceNote}
-      panels={opts.panels}
+      artboard1={opts.artboard1}
+      artboard2={opts.artboard2}
+      artboard3={opts.artboard3}
       photosByPanel={opts.photosByPanel}
     />
   );

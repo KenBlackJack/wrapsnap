@@ -5,11 +5,15 @@ import { authOptions } from "@/lib/auth";
 import { getSupabaseClient } from "@/lib/supabase";
 import CopyLink from "./copy-link";
 import PinReveal from "./pin-reveal";
-import { type VinylZone } from "./annotated-photo";
 import PdfButtonWrapper from "./pdf-button-wrapper";
 import PhotoGrid from "./photo-grid";
 import type { PhotoPanel } from "./photo-grid";
 import ProcessingPoller from "./processing-poller";
+import type {
+  Artboard1Data,
+  Artboard2Data,
+  Artboard3Data,
+} from "@/components/EstimatePDF";
 
 export const dynamic = "force-dynamic";
 
@@ -45,28 +49,10 @@ function formatDateTime(iso: string) {
   });
 }
 
-interface VinylZoneEstimate {
-  type: "printed_wrap" | "cut_vinyl" | "review";
-  name?: string;
-  sqft: number;
-  sqft_low: number;
-  sqft_high: number;
-}
-
-interface PanelEstimate {
-  panel: string;
-  name?: string;
-  coverage_type?: string;
-  panel_sqft?: number;
-  panel_sqft_low?: number;
-  panel_sqft_high?: number;
-  // legacy field names (kept for backwards compat with old estimates)
-  sqft?: number;
-  sqft_low?: number;
-  sqft_high?: number;
-  vinyl_zones?: VinylZoneEstimate[];
-  // annotated photo zones (separate type used by canvas overlay)
-  _vinyl_zones_raw?: VinylZone[];
+interface EstimateArtboards {
+  artboard1?: Artboard1Data | null;
+  artboard2?: Artboard2Data | null;
+  artboard3?: Artboard3Data | null;
 }
 
 export default async function SessionDetailPage({
@@ -82,7 +68,6 @@ export default async function SessionDetailPage({
 
   const supabase = getSupabaseClient();
 
-  // Fetch session — must be owned by this AE
   const { data: session, error } = await supabase
     .from("sessions")
     .select("id, token, client_name, client_phone, vehicle_description, status, created_at, created_by")
@@ -91,7 +76,6 @@ export default async function SessionDetailPage({
 
   if (error || !session || session.created_by !== userEmail) notFound();
 
-  // Fetch uploads
   const { data: uploads, error: uploadsError } = await supabase
     .from("uploads")
     .select("panel, storage_path")
@@ -101,7 +85,6 @@ export default async function SessionDetailPage({
     console.error("Session detail: uploads query error", { id, message: uploadsError.message, uploadsError });
   }
 
-  // Build signed URLs (1-hour expiry) for uploaded panels
   const uploadsBySlug: Record<string, string> = {};
   for (const upload of uploads ?? []) {
     const { data: signed, error: signedError } = await supabase.storage
@@ -117,7 +100,6 @@ export default async function SessionDetailPage({
 
   console.log("Session detail: uploads found", { id, panels: Object.keys(uploadsBySlug) });
 
-  // Fetch most recent estimate
   const { data: estimates } = await supabase
     .from("estimates")
     .select("vehicle_type, panels, total_sqft, sqft_low, sqft_high, confidence, confidence_note, created_at")
@@ -127,23 +109,15 @@ export default async function SessionDetailPage({
 
   const estimate = estimates?.[0] ?? null;
 
-  // Build a map of panel slug → vinyl zones for annotation overlay
-  const zonesByPanel: Record<string, VinylZone[]> = {};
-  if (estimate && Array.isArray(estimate.panels)) {
-    for (const p of estimate.panels as PanelEstimate[]) {
-      const slug = p.panel ?? p.name;
-      if (slug && Array.isArray(p.vinyl_zones)) {
-        zonesByPanel[slug] = p.vinyl_zones;
-      }
-    }
+  // Extract artboard data — new estimates store {artboard1, artboard2, artboard3}
+  let artboards: EstimateArtboards | null = null;
+  if (estimate?.panels && !Array.isArray(estimate.panels)) {
+    artboards = estimate.panels as EstimateArtboards;
   }
 
   const scanUrl = `https://wrapsnap.advertisingvehicles.com/scan/${session.token}`;
   const status = session.status as SessionStatus;
 
-  // A session is a self-scan when the AE scanned the vehicle themselves.
-  // Self-scan sessions have no real phone number — the dashboard scan button
-  // sends "0000000000" as a placeholder, which the API stores verbatim.
   const phone = (session.client_phone ?? "").trim();
   const isSelfScan = !phone || phone === "0000000000";
 
@@ -253,9 +227,7 @@ export default async function SessionDetailPage({
           </div>
         )}
 
-        {/* Scan link + PIN — only for pending client-invite sessions.
-            Hidden for self-scan sessions (no real phone) and once
-            active/complete (nothing left to do with the link). */}
+        {/* Scan link + PIN */}
         {status === "pending" && !isSelfScan && (
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-5">
             <div>
@@ -291,7 +263,7 @@ export default async function SessionDetailPage({
               slug,
               label,
               imageUrl: uploadsBySlug[slug] ?? null,
-              zones: zonesByPanel[slug] ?? [],
+              zones: [],
             }))}
           />
         </div>
@@ -319,116 +291,172 @@ export default async function SessionDetailPage({
                   vehicleType={estimate.vehicle_type}
                   sessionDate={session.created_at}
                   totalSqft={estimate.total_sqft}
-                  sqftLow={estimate.sqft_low}
-                  sqftHigh={estimate.sqft_high}
                   confidence={estimate.confidence}
                   confidenceNote={estimate.confidence_note}
-                  panels={(estimate.panels as import("@/components/EstimatePDF").PanelPDF[]) ?? []}
+                  artboard1={artboards?.artboard1 ?? null}
+                  artboard2={artboards?.artboard2 ?? null}
+                  artboard3={artboards?.artboard3 ?? null}
                   photosByPanel={Object.keys(uploadsBySlug).length > 0 ? uploadsBySlug : null}
-                  zonesByPanel={zonesByPanel}
                 />
               </div>
             </div>
 
-            {/* Summary */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 text-sm">
+            {/* Summary bar — vehicle type + three artboard numbers + total */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
               <div className="rounded-lg bg-gray-50 p-3">
                 <p className="text-gray-500 text-xs mb-0.5">Vehicle type</p>
                 <p className="font-semibold text-gray-900 capitalize">
                   {estimate.vehicle_type?.replace(/_/g, " ") ?? "—"}
                 </p>
               </div>
-              <div className="rounded-lg bg-gray-50 p-3">
-                <p className="text-gray-500 text-xs mb-0.5">Total sq ft</p>
-                <p className="font-semibold text-gray-900">
-                  {estimate.total_sqft != null ? estimate.total_sqft.toFixed(1) : "—"}
+              <div className="rounded-lg p-3" style={{ backgroundColor: "#EFF6FF" }}>
+                <p className="text-xs mb-0.5" style={{ color: "#3B82F6" }}>Cut Vinyl</p>
+                <p className="font-semibold" style={{ color: "#1D4ED8" }}>
+                  {artboards?.artboard1?.sqft != null
+                    ? `${artboards.artboard1.sqft.toFixed(1)} sq ft`
+                    : "—"}
+                </p>
+              </div>
+              <div className="rounded-lg p-3" style={{ backgroundColor: "#FFF7ED" }}>
+                <p className="text-xs mb-0.5" style={{ color: "#EA580C" }}>Printed Vinyl</p>
+                <p className="font-semibold" style={{ color: "#C2410C" }}>
+                  {artboards?.artboard3?.total_sqft != null
+                    ? `${artboards.artboard3.total_sqft.toFixed(1)} sq ft`
+                    : "—"}
                 </p>
               </div>
               <div className="rounded-lg bg-gray-50 p-3">
-                <p className="text-gray-500 text-xs mb-0.5">Range</p>
-                <p className="font-semibold text-gray-900">
-                  {estimate.sqft_low != null && estimate.sqft_high != null
-                    ? `${estimate.sqft_low.toFixed(1)} – ${estimate.sqft_high.toFixed(1)}`
-                    : "—"}
+                <p className="text-gray-500 text-xs mb-0.5">Total sq ft</p>
+                <p className="font-semibold" style={{ color: "#007BBA" }}>
+                  {estimate.total_sqft != null ? estimate.total_sqft.toFixed(1) : "—"}
                 </p>
               </div>
             </div>
 
-            {/* Per-panel breakdown */}
-            {Array.isArray(estimate.panels) && estimate.panels.length > 0 && (
+            {/* Artboard 1 — Cut Vinyl with Premask */}
+            {artboards?.artboard1 && (
               <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Panel breakdown</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-gray-700">
+                    Artboard 1 — Cut Vinyl with Premask
+                  </p>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: "#EFF6FF", color: "#1D4ED8" }}>
+                    {artboards.artboard1.sqft != null ? `${artboards.artboard1.sqft.toFixed(1)} sq ft` : "—"}
+                  </span>
+                </div>
                 <div className="rounded-lg border border-gray-200 overflow-hidden text-sm divide-y divide-gray-100">
-                  {(estimate.panels as PanelEstimate[]).map((panel) => {
-                    const slug = panel.panel ?? panel.name ?? "unknown";
-                    const label = slug.replace(/_/g, " ");
-                    // Support both new (panel_sqft) and old (sqft) field names
-                    const totalSqft = panel.panel_sqft ?? panel.sqft;
-                    const lowSqft   = panel.panel_sqft_low  ?? panel.sqft_low;
-                    const highSqft  = panel.panel_sqft_high ?? panel.sqft_high;
-                    const zones     = panel.vinyl_zones ?? [];
-
-                    return (
-                      <div key={slug} className="bg-white">
-                        {/* Panel header row */}
-                        <div className="flex items-center justify-between px-4 py-2.5">
-                          <div className="flex items-center gap-2">
-                            <span className="capitalize font-medium text-gray-900">{label}</span>
-                            {panel.coverage_type && panel.coverage_type !== "none" && (
-                              <span className="rounded-full px-2 py-0.5 text-[10px] font-medium bg-blue-50 text-blue-700 capitalize">
-                                {panel.coverage_type.replace(/_/g, " ")}
-                              </span>
-                            )}
-                          </div>
-                          <span className="font-semibold text-gray-900 shrink-0">
-                            {totalSqft != null ? `${totalSqft.toFixed(1)} sq ft` : "—"}
-                            {lowSqft != null && highSqft != null && (
-                              <span className="ml-1.5 text-xs font-normal text-gray-400">
-                                ({lowSqft.toFixed(1)}–{highSqft.toFixed(1)})
-                              </span>
-                            )}
-                          </span>
+                  {/* Artboard dimension header */}
+                  <div className="flex items-center justify-between px-4 py-2 bg-blue-50">
+                    <span className="text-xs font-medium text-blue-700">
+                      3M 180CV3 — 52" × {artboards.artboard1.artboard_height_in ?? "?"}″ artboard
+                    </span>
+                    <span className="text-xs text-blue-500">premask holds all groups</span>
+                  </div>
+                  {(artboards.artboard1.groups ?? []).map((group, gi) => (
+                    <div key={gi} className="bg-white">
+                      <div className="flex items-start justify-between px-4 py-2.5">
+                        <div className="min-w-0 flex-1 pr-3">
+                          <p className="font-medium text-gray-900 text-sm">{group.name}</p>
+                          {group.items && group.items.length > 0 && (
+                            <p className="text-xs text-gray-400 mt-0.5">{group.items.join(", ")}</p>
+                          )}
                         </div>
-
-                        {/* Zone rows */}
-                        {zones.length > 0 && (
-                          <div className="border-t border-gray-50 bg-gray-50 divide-y divide-gray-100">
-                            {zones.map((zone, zi) => (
-                              <div key={zi} className="flex items-center justify-between px-4 py-1.5 pl-7">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <span
-                                    className="shrink-0 h-2 w-2 rounded-sm"
-                                    style={{
-                                      background:
-                                        zone.type === "printed_wrap" ? "#3b82f6"
-                                        : zone.type === "cut_vinyl"  ? "#ef4444"
-                                        : "#eab308",
-                                    }}
-                                  />
-                                  <span className="text-gray-600 text-xs truncate">
-                                    {zone.name ?? zone.type.replace(/_/g, " ")}
-                                  </span>
-                                </div>
-                                <span className="text-gray-700 text-xs shrink-0 ml-3">
-                                  {zone.sqft != null ? `${zone.sqft.toFixed(1)} sq ft` : "—"}
-                                  {zone.sqft_low != null && zone.sqft_high != null && (
-                                    <span className="ml-1 text-gray-400">
-                                      ({zone.sqft_low.toFixed(1)}–{zone.sqft_high.toFixed(1)})
-                                    </span>
-                                  )}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        <div className="text-right shrink-0">
+                          {group.width_in != null && group.height_in != null && (
+                            <p className="text-xs font-medium text-gray-700">
+                              {group.width_in}" × {group.height_in}"
+                            </p>
+                          )}
+                          {group.can_rotate && (
+                            <p className="text-[10px] text-gray-400">can rotate 90°</p>
+                          )}
+                        </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
+                  {(artboards.artboard1.groups ?? []).length === 0 && (
+                    <div className="px-4 py-3 text-sm text-gray-400">No cut vinyl groups</div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Confidence note — always visible in gray box */}
+            {/* Artboard 2 — Large Cut Panels */}
+            {artboards?.artboard2 && (artboards.artboard2.panels ?? []).length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-gray-700">
+                    Artboard 2 — Large Cut Panels
+                  </p>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: "#F0FDF4", color: "#15803D" }}>
+                    {artboards.artboard2.total_sqft != null ? `${artboards.artboard2.total_sqft.toFixed(1)} sq ft` : "—"}
+                  </span>
+                </div>
+                <div className="rounded-lg border border-gray-200 overflow-hidden text-sm divide-y divide-gray-100">
+                  <div className="flex items-center px-4 py-2 bg-green-50">
+                    <span className="text-xs font-medium text-green-700">Single-color solid shapes — no gradients</span>
+                  </div>
+                  {(artboards.artboard2.panels ?? []).map((panel, pi) => (
+                    <div key={pi} className="flex items-center justify-between px-4 py-2.5 bg-white">
+                      <p className="font-medium text-gray-900 text-sm">{panel.name}</p>
+                      <div className="text-right shrink-0 ml-3">
+                        {panel.width_in != null && panel.height_in != null && (
+                          <p className="text-xs font-medium text-gray-700">
+                            {panel.width_in}" × {panel.height_in}"
+                            {(panel.quantity ?? 1) > 1 && ` × ${panel.quantity}`}
+                          </p>
+                        )}
+                        {panel.sqft != null && (
+                          <p className="text-xs text-green-700 font-semibold">{panel.sqft.toFixed(1)} sq ft</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Artboard 3 — Printed Vinyl */}
+            {artboards?.artboard3 && (artboards.artboard3.panels ?? []).length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-gray-700">
+                    Artboard 3 — Printed Vinyl
+                  </p>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: "#FFF7ED", color: "#C2410C" }}>
+                    {artboards.artboard3.total_sqft != null ? `${artboards.artboard3.total_sqft.toFixed(1)} sq ft` : "—"}
+                  </span>
+                </div>
+                <div className="rounded-lg border border-gray-200 overflow-hidden text-sm divide-y divide-gray-100">
+                  <div className="flex items-center px-4 py-2 bg-orange-50">
+                    <span className="text-xs font-medium text-orange-700">52"-wide strips · full panel rectangles · includes area under cut vinyl</span>
+                  </div>
+                  {(artboards.artboard3.panels ?? []).map((panel, pi) => (
+                    <div key={pi} className="flex items-center justify-between px-4 py-2.5 bg-white">
+                      <div className="min-w-0 flex-1 pr-3">
+                        <p className="font-medium text-gray-900 text-sm">{panel.name}</p>
+                        {panel.panel_width_in != null && panel.panel_height_in != null && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {panel.panel_width_in}" × {panel.panel_height_in}"
+                            {panel.strips_needed != null && ` · ${panel.strips_needed} strip${panel.strips_needed !== 1 ? "s" : ""}`}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        {panel.sqft_per_strip != null && (
+                          <p className="text-xs text-gray-500">{panel.sqft_per_strip.toFixed(1)} sq ft/strip</p>
+                        )}
+                        {panel.total_sqft != null && (
+                          <p className="text-xs font-semibold" style={{ color: "#C2410C" }}>{panel.total_sqft.toFixed(1)} sq ft</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Confidence note */}
             <div className="rounded-lg bg-gray-50 border border-gray-100 px-4 py-3">
               <p className="text-xs font-medium text-gray-500 mb-0.5">Notes</p>
               <p className="text-xs text-gray-600 leading-relaxed">
@@ -437,7 +465,6 @@ export default async function SessionDetailPage({
             </div>
           </div>
         ) : status === "processing" ? (
-          /* Estimation running in background — poll until complete */
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"

@@ -10,6 +10,52 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export interface Artboard1Group {
+  name: string;
+  items?: string[] | null;
+  width_in?: number | null;
+  height_in?: number | null;
+  can_rotate?: boolean | null;
+}
+
+export interface Artboard1Data {
+  label?: string | null;
+  groups?: Artboard1Group[] | null;
+  artboard_width_in?: number | null;
+  artboard_height_in?: number | null;
+  sqft?: number | null;
+}
+
+export interface Artboard2Panel {
+  name: string;
+  width_in?: number | null;
+  height_in?: number | null;
+  quantity?: number | null;
+  sqft?: number | null;
+}
+
+export interface Artboard2Data {
+  label?: string | null;
+  panels?: Artboard2Panel[] | null;
+  total_sqft?: number | null;
+}
+
+export interface Artboard3Panel {
+  name: string;
+  panel_width_in?: number | null;
+  panel_height_in?: number | null;
+  strips_needed?: number | null;
+  sqft_per_strip?: number | null;
+  total_sqft?: number | null;
+}
+
+export interface Artboard3Data {
+  label?: string | null;
+  panels?: Artboard3Panel[] | null;
+  total_sqft?: number | null;
+}
+
+// PanelPDF kept for backward compatibility with old estimates
 export interface VinylZonePDF {
   type: string;
   name?: string | null;
@@ -25,7 +71,6 @@ export interface PanelPDF {
   panel_sqft?: number | null;
   panel_sqft_low?: number | null;
   panel_sqft_high?: number | null;
-  /** Legacy field names kept for old estimates */
   sqft?: number | null;
   sqft_low?: number | null;
   sqft_high?: number | null;
@@ -39,12 +84,11 @@ export interface EstimatePDFProps {
   vehicleType?: string | null;
   sessionDate: string;
   totalSqft?: number | null;
-  sqftLow?: number | null;
-  sqftHigh?: number | null;
   confidence?: string | null;
   confidenceNote?: string | null;
-  panels: PanelPDF[];
-  /** Map of panel slug → photo URL (signed Supabase URL or base64 data URI) */
+  artboard1?: Artboard1Data | null;
+  artboard2?: Artboard2Data | null;
+  artboard3?: Artboard3Data | null;
   photosByPanel?: Record<string, string> | null;
 }
 
@@ -103,24 +147,36 @@ const s = StyleSheet.create({
   confBadge:   { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   confText:    { fontFamily: "Helvetica-Bold", fontSize: 9 },
 
-  // Panel blocks
-  panelBlock:  { marginBottom: 7, borderWidth: 1, borderColor: BORDER, borderRadius: 6 },
-  panelHead:   { flexDirection: "row", justifyContent: "space-between", backgroundColor: LIGHT_BG, paddingHorizontal: 10, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: BORDER, borderTopLeftRadius: 6, borderTopRightRadius: 6 },
-  panelName:   { fontFamily: "Helvetica-Bold", fontSize: 9, color: "#111827" },
-  panelTotal:  { fontFamily: "Helvetica-Bold", fontSize: 9, color: BLUE },
-  zoneRow:     { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 10, paddingLeft: 20, paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: "#F3F4F6" },
-  zoneRowLast: { borderBottomWidth: 0 },
-  zoneLabel:   { fontSize: 8, color: GRAY_TEXT },
-  zoneValue:   { fontSize: 8, color: "#374151" },
+  // Artboard blocks
+  artboardBlock:   { marginBottom: 10, borderWidth: 1, borderColor: BORDER, borderRadius: 6 },
+  artboardHead:    { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#EBF5FB", paddingHorizontal: 10, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: BORDER, borderTopLeftRadius: 6, borderTopRightRadius: 6 },
+  artboardHeadAlt: { backgroundColor: "#F0FDF4" },
+  artboardHeadAlt2:{ backgroundColor: "#FFF7ED" },
+  artboardLabel:   { fontFamily: "Helvetica-Bold", fontSize: 9, color: DARK_BLUE },
+  artboardDims:    { fontSize: 8, color: GRAY_TEXT, marginTop: 1 },
+  artboardSqft:    { fontFamily: "Helvetica-Bold", fontSize: 10, color: BLUE },
 
-  // Totals table
-  totalsBox:     { borderWidth: 1, borderColor: BORDER, borderRadius: 6, marginBottom: 14 },
-  totalsRow:     { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 12, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: BORDER },
-  totalsSumRow:  { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 12, paddingVertical: 8, backgroundColor: LIGHT_BG, borderTopLeftRadius: 0, borderTopRightRadius: 0, borderBottomLeftRadius: 6, borderBottomRightRadius: 6 },
-  totalsLabel:   { fontSize: 9, color: "#374151" },
-  totalsValue:   { fontSize: 9, color: "#111827" },
-  totalsBoldLbl: { fontFamily: "Helvetica-Bold", fontSize: 10, color: "#111827" },
-  totalsBoldVal: { fontFamily: "Helvetica-Bold", fontSize: 10, color: BLUE },
+  // Row inside artboard
+  itemRow:     { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 10, paddingLeft: 16, paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: "#F3F4F6" },
+  itemRowLast: { borderBottomWidth: 0 },
+  itemName:    { fontFamily: "Helvetica-Bold", fontSize: 8, color: "#111827", marginBottom: 1 },
+  itemSub:     { fontSize: 7, color: GRAY_TEXT },
+  itemRight:   { alignItems: "flex-end" },
+  itemDims:    { fontSize: 8, color: "#374151" },
+  itemQty:     { fontSize: 7, color: GRAY_TEXT },
+  itemSqft:    { fontSize: 8, color: BLUE, fontFamily: "Helvetica-Bold" },
+
+  // Artboard footer (dimension summary)
+  artboardFooter: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 10, paddingVertical: 6, backgroundColor: LIGHT_BG, borderTopWidth: 1, borderTopColor: BORDER, borderBottomLeftRadius: 6, borderBottomRightRadius: 6 },
+  artboardFooterText: { fontSize: 8, color: GRAY_TEXT },
+  artboardFooterSqft: { fontFamily: "Helvetica-Bold", fontSize: 8, color: BLUE },
+
+  // Production summary bar
+  summaryBar:  { flexDirection: "row", borderWidth: 1, borderColor: BORDER, borderRadius: 6, marginBottom: 14, overflow: "hidden" },
+  summaryCell: { flex: 1, paddingHorizontal: 10, paddingVertical: 8, borderRightWidth: 1, borderRightColor: BORDER },
+  summaryCellLast: { borderRightWidth: 0 },
+  summaryCellLabel: { fontSize: 7, color: GRAY_TEXT, marginBottom: 3 },
+  summaryCellVal:   { fontFamily: "Helvetica-Bold", fontSize: 10, color: BLUE },
 
   // Notes
   notesBox:  { backgroundColor: LIGHT_BG, borderWidth: 1, borderColor: BORDER, borderRadius: 6, padding: 12, marginBottom: 16 },
@@ -149,16 +205,6 @@ function toLabel(slug: string) {
   return slug.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function zoneLabel(type: string, name?: string | null) {
-  if (name) return name;
-  const map: Record<string, string> = {
-    printed_wrap: "Printed Wrap",
-    cut_vinyl:    "Cut Vinyl",
-    review:       "Needs Review",
-  };
-  return map[type] ?? toLabel(type);
-}
-
 function confColors(c?: string | null): { bg: string; color: string } {
   if (c === "high")   return { bg: "#DCFCE7", color: "#16A34A" };
   if (c === "medium") return { bg: "#FEF3C7", color: "#D97706" };
@@ -182,27 +228,21 @@ export default function EstimatePDFDocument({
   vehicleType,
   sessionDate,
   totalSqft,
-  sqftLow,
-  sqftHigh,
   confidence,
   confidenceNote,
-  panels,
+  artboard1,
+  artboard2,
+  artboard3,
   photosByPanel,
 }: EstimatePDFProps) {
-  // Derive production totals from zone data
-  let printedWrap = 0;
-  let cutVinyl    = 0;
-  for (const p of panels) {
-    for (const z of p.vinyl_zones ?? []) {
-      if (z.type === "printed_wrap") printedWrap += z.sqft ?? 0;
-      else if (z.type === "cut_vinyl") cutVinyl  += z.sqft ?? 0;
-    }
-  }
-  const hasMaterialBreakdown = printedWrap > 0 || cutVinyl > 0;
-
   const { bg: confBg, color: confColor } = confColors(confidence);
   const generatedOn = fmtDate(new Date().toISOString());
   const sessionOn   = fmtDate(sessionDate);
+
+  const a1sqft = artboard1?.sqft ?? 0;
+  const a2sqft = artboard2?.total_sqft ?? 0;
+  const a3sqft = artboard3?.total_sqft ?? 0;
+  const hasArtboards = a1sqft > 0 || a2sqft > 0 || a3sqft > 0;
 
   return (
     <Document
@@ -244,11 +284,6 @@ export default function EstimatePDFDocument({
               <Text style={s.totalNum}>{totalSqft != null ? totalSqft.toFixed(1) : "—"}</Text>
               <Text style={s.totalUnit}>sq ft</Text>
             </View>
-            {sqftLow != null && sqftHigh != null && (
-              <Text style={s.rangeText}>
-                Range: {sqftLow.toFixed(1)} – {sqftHigh.toFixed(1)} sq ft
-              </Text>
-            )}
           </View>
           <View style={s.summaryRight}>
             <Text style={s.confLabel}>CONFIDENCE</Text>
@@ -260,51 +295,160 @@ export default function EstimatePDFDocument({
           </View>
         </View>
 
-        {/* ── PANEL BREAKDOWN ── */}
-        {panels.length > 0 && (
-          <View>
-            <Text style={s.sectionTitle}>PANEL BREAKDOWN</Text>
-            {panels.map((p, pi) => {
-              const slug   = p.panel ?? p.name ?? `panel-${pi}`;
-              const total  = p.panel_sqft  ?? p.sqft;
-              const low    = p.panel_sqft_low  ?? p.sqft_low;
-              const high   = p.panel_sqft_high ?? p.sqft_high;
-              const zones  = p.vinyl_zones ?? [];
+        {/* ── ARTBOARD SUMMARY BAR ── */}
+        {hasArtboards && (
+          <View style={[s.summaryBar, { marginBottom: 14 }]}>
+            <View style={s.summaryCell}>
+              <Text style={s.summaryCellLabel}>CUT VINYL (A1)</Text>
+              <Text style={s.summaryCellVal}>{a1sqft.toFixed(1)} sq ft</Text>
+            </View>
+            <View style={s.summaryCell}>
+              <Text style={s.summaryCellLabel}>LARGE CUT (A2)</Text>
+              <Text style={s.summaryCellVal}>{a2sqft.toFixed(1)} sq ft</Text>
+            </View>
+            <View style={[s.summaryCell, s.summaryCellLast]}>
+              <Text style={s.summaryCellLabel}>PRINTED (A3)</Text>
+              <Text style={s.summaryCellVal}>{a3sqft.toFixed(1)} sq ft</Text>
+            </View>
+          </View>
+        )}
 
-              return (
-                <View key={slug} style={s.panelBlock}>
-                  <View style={s.panelHead}>
-                    <Text style={s.panelName}>{toLabel(slug)}</Text>
-                    <Text style={s.panelTotal}>
-                      {total != null ? `${total.toFixed(1)} sq ft` : "—"}
-                      {low != null && high != null ? `  (${low.toFixed(1)} – ${high.toFixed(1)})` : ""}
+        {/* ── ARTBOARD 1 — CUT VINYL WITH PREMASK ── */}
+        {artboard1 && (
+          <View>
+            <Text style={s.sectionTitle}>ARTBOARD 1 — CUT VINYL WITH PREMASK</Text>
+            <View style={s.artboardBlock}>
+              <View style={s.artboardHead}>
+                <View>
+                  <Text style={s.artboardLabel}>Cut Vinyl with Premask</Text>
+                  {artboard1.artboard_height_in != null && (
+                    <Text style={s.artboardDims}>
+                      Artboard: 52" × {artboard1.artboard_height_in}"  (3M 180CV3, 52" usable width)
                     </Text>
-                  </View>
-                  {zones.length > 0 ? (
-                    zones.map((z, zi) => (
-                      <View
-                        key={zi}
-                        style={[
-                          s.zoneRow,
-                          zi === zones.length - 1 ? s.zoneRowLast : {},
-                          { backgroundColor: zi % 2 === 0 ? "#FFFFFF" : "#FAFAFA" },
-                        ]}
-                      >
-                        <Text style={s.zoneLabel}>{zoneLabel(z.type, z.name)}</Text>
-                        <Text style={s.zoneValue}>
-                          {z.sqft != null ? `${z.sqft.toFixed(1)} sq ft` : "—"}
-                        </Text>
-                      </View>
-                    ))
-                  ) : (
-                    <View style={[s.zoneRow, s.zoneRowLast]}>
-                      <Text style={s.zoneLabel}>No zones recorded</Text>
-                      <Text style={s.zoneValue}>—</Text>
-                    </View>
                   )}
                 </View>
-              );
-            })}
+                <Text style={s.artboardSqft}>
+                  {artboard1.sqft != null ? `${artboard1.sqft.toFixed(1)} sq ft` : "—"}
+                </Text>
+              </View>
+              {(artboard1.groups ?? []).map((group, gi) => {
+                const isLast = gi === (artboard1.groups?.length ?? 0) - 1;
+                return (
+                  <View key={gi} style={[s.itemRow, isLast ? s.itemRowLast : {}]}>
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <Text style={s.itemName}>{group.name}</Text>
+                      {group.items && group.items.length > 0 && (
+                        <Text style={s.itemSub}>{group.items.join(", ")}</Text>
+                      )}
+                    </View>
+                    <View style={s.itemRight}>
+                      {group.width_in != null && group.height_in != null && (
+                        <Text style={s.itemDims}>{group.width_in}" × {group.height_in}"</Text>
+                      )}
+                      {group.can_rotate && (
+                        <Text style={s.itemQty}>can rotate 90°</Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+              {(artboard1.groups ?? []).length === 0 && (
+                <View style={[s.itemRow, s.itemRowLast]}>
+                  <Text style={s.itemSub}>No cut vinyl groups</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* ── ARTBOARD 2 — LARGE CUT PANELS ── */}
+        {artboard2 && (
+          <View>
+            <Text style={s.sectionTitle}>ARTBOARD 2 — LARGE CUT PANELS</Text>
+            <View style={s.artboardBlock}>
+              <View style={[s.artboardHead, s.artboardHeadAlt]}>
+                <View>
+                  <Text style={[s.artboardLabel, { color: "#166534" }]}>Large Cut Panels</Text>
+                  <Text style={s.artboardDims}>Single-color shapes, no gradients</Text>
+                </View>
+                <Text style={[s.artboardSqft, { color: "#16A34A" }]}>
+                  {artboard2.total_sqft != null ? `${artboard2.total_sqft.toFixed(1)} sq ft` : "—"}
+                </Text>
+              </View>
+              {(artboard2.panels ?? []).map((panel, pi) => {
+                const isLast = pi === (artboard2.panels?.length ?? 0) - 1;
+                return (
+                  <View key={pi} style={[s.itemRow, isLast ? s.itemRowLast : {}]}>
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <Text style={s.itemName}>{panel.name}</Text>
+                    </View>
+                    <View style={s.itemRight}>
+                      {panel.width_in != null && panel.height_in != null && (
+                        <Text style={s.itemDims}>{panel.width_in}" × {panel.height_in}"</Text>
+                      )}
+                      {(panel.quantity ?? 1) > 1 && (
+                        <Text style={s.itemQty}>qty: {panel.quantity}</Text>
+                      )}
+                      {panel.sqft != null && (
+                        <Text style={s.itemSqft}>{panel.sqft.toFixed(1)} sq ft</Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+              {(artboard2.panels ?? []).length === 0 && (
+                <View style={[s.itemRow, s.itemRowLast]}>
+                  <Text style={s.itemSub}>No large cut panels</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* ── ARTBOARD 3 — PRINTED VINYL ── */}
+        {artboard3 && (
+          <View>
+            <Text style={s.sectionTitle}>ARTBOARD 3 — PRINTED VINYL</Text>
+            <View style={s.artboardBlock}>
+              <View style={[s.artboardHead, s.artboardHeadAlt2]}>
+                <View>
+                  <Text style={[s.artboardLabel, { color: "#9A3412" }]}>Printed Vinyl</Text>
+                  <Text style={s.artboardDims}>52"-wide strips, full panel rectangles</Text>
+                </View>
+                <Text style={[s.artboardSqft, { color: "#EA580C" }]}>
+                  {artboard3.total_sqft != null ? `${artboard3.total_sqft.toFixed(1)} sq ft` : "—"}
+                </Text>
+              </View>
+              {(artboard3.panels ?? []).map((panel, pi) => {
+                const isLast = pi === (artboard3.panels?.length ?? 0) - 1;
+                return (
+                  <View key={pi} style={[s.itemRow, isLast ? s.itemRowLast : {}]}>
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <Text style={s.itemName}>{panel.name}</Text>
+                      {panel.panel_width_in != null && panel.panel_height_in != null && (
+                        <Text style={s.itemSub}>
+                          Panel: {panel.panel_width_in}" × {panel.panel_height_in}"
+                          {panel.strips_needed != null ? `  ·  ${panel.strips_needed} strip${panel.strips_needed !== 1 ? "s" : ""}` : ""}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={s.itemRight}>
+                      {panel.sqft_per_strip != null && (
+                        <Text style={s.itemDims}>{panel.sqft_per_strip.toFixed(1)} sq ft/strip</Text>
+                      )}
+                      {panel.total_sqft != null && (
+                        <Text style={s.itemSqft}>{panel.total_sqft.toFixed(1)} sq ft</Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+              {(artboard3.panels ?? []).length === 0 && (
+                <View style={[s.itemRow, s.itemRowLast]}>
+                  <Text style={s.itemSub}>No printed panels</Text>
+                </View>
+              )}
+            </View>
           </View>
         )}
 
@@ -331,36 +475,6 @@ export default function EstimatePDFDocument({
             </View>
           </View>
         )}
-
-        {/* ── PRODUCTION TOTALS ── */}
-        <View style={{ marginBottom: 14 }}>
-          <Text style={s.sectionTitle}>PRODUCTION TOTALS</Text>
-          <View style={s.totalsBox}>
-            {hasMaterialBreakdown ? (
-              <>
-                <View style={s.totalsRow}>
-                  <Text style={s.totalsLabel}>Printed Wrap</Text>
-                  <Text style={s.totalsValue}>{printedWrap.toFixed(1)} sq ft</Text>
-                </View>
-                <View style={s.totalsRow}>
-                  <Text style={s.totalsLabel}>Cut Vinyl</Text>
-                  <Text style={s.totalsValue}>{cutVinyl.toFixed(1)} sq ft</Text>
-                </View>
-              </>
-            ) : (
-              <View style={s.totalsRow}>
-                <Text style={s.totalsLabel}>Material breakdown not available for this estimate</Text>
-                <Text style={s.totalsValue}>—</Text>
-              </View>
-            )}
-            <View style={s.totalsSumRow}>
-              <Text style={s.totalsBoldLbl}>Combined Total</Text>
-              <Text style={s.totalsBoldVal}>
-                {totalSqft != null ? `${totalSqft.toFixed(1)} sq ft` : "—"}
-              </Text>
-            </View>
-          </View>
-        </View>
 
         {/* ── NOTES ── */}
         {confidenceNote ? (

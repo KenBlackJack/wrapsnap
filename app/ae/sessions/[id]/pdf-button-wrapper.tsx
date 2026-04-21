@@ -1,8 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { PanelPDF } from "@/components/EstimatePDF";
-import type { VinylZone } from "./annotated-photo";
+import type { Artboard1Data, Artboard2Data, Artboard3Data } from "@/components/EstimatePDF";
 
 const DownloadPDFButton = dynamic(() => import("./download-pdf-button"), {
   ssr: false,
@@ -27,13 +26,12 @@ interface PdfButtonWrapperProps {
   vehicleType?: string | null;
   sessionDate: string;
   totalSqft?: number | null;
-  sqftLow?: number | null;
-  sqftHigh?: number | null;
   confidence?: string | null;
   confidenceNote?: string | null;
-  panels: PanelPDF[];
+  artboard1?: Artboard1Data | null;
+  artboard2?: Artboard2Data | null;
+  artboard3?: Artboard3Data | null;
   photosByPanel?: Record<string, string> | null;
-  zonesByPanel?: Record<string, VinylZone[]> | null;
 }
 
 export default function PdfButtonWrapper(props: PdfButtonWrapperProps) {

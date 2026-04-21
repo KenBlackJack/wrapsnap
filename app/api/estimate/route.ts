@@ -3,7 +3,7 @@ import { getSupabaseClient } from "@/lib/supabase";
 import Anthropic from "@anthropic-ai/sdk";
 import { Resend } from "resend";
 import { generatePDF } from "@/lib/generate-pdf";
-import type { PanelPDF } from "@/components/EstimatePDF";
+import type { Artboard1Data, Artboard2Data, Artboard3Data } from "@/components/EstimatePDF";
 
 export const runtime = "nodejs";
 
@@ -17,109 +17,182 @@ function toClaudeMediaType(raw: string): "image/jpeg" | "image/png" | "image/gif
 }
 
 const ESTIMATION_PROMPT = `\
-You are VinylSizer, an expert vinyl wrap estimator for Advertising Vehicles, a fleet graphics company. Analyze the provided vehicle panel photos and produce a precise square-footage estimate for all vinyl graphics.
+You are VinylSizer, an expert vinyl wrap estimator for Advertising Vehicles, a fleet graphics company.
 
-Follow these 5 steps for EACH panel photo:
+MATERIAL SPECIFICATION: 3M 180CV3, 54" wide rolls. Usable width: 52". Length is unlimited — 52" is the ONLY width constraint.
 
-STEP 1 — VALIDATE THE PHOTO
-Confirm the photo shows a vehicle panel with TWO 12-inch diameter circular fiducial reference cards placed flat on the surface — one near the front edge of the panel, one near the rear edge. If the photo is missing a vehicle, has fewer than two cards visible, is too dark, too blurry, too close, or shot at an extreme angle, mark valid: false and add the panel name to invalid_panels. If only one card is found, still attempt measurement but set confidence to "medium" and note it in confidence_note.
+Analyze the provided vehicle panel photos and classify every graphic element into THREE production artboards. Use the fiducial reference cards to calibrate measurements.
 
-STEP 2 — DUAL-CARD PIXEL CALIBRATION
-Locate BOTH 12-inch diameter fiducial cards. For each card, measure its pixel diameter independently:
-- near_card_pixels_per_inch = near_card_diameter_pixels / 12  (card closest to camera / larger in frame)
-- far_card_pixels_per_inch  = far_card_diameter_pixels  / 12  (card farthest from camera / smaller in frame)
+═══════════════════════════════════════════
+STEP 1 — CALIBRATE EACH PHOTO
+═══════════════════════════════════════════
+Each photo should show TWO 12-inch diameter circular fiducial reference cards placed flat on the vehicle surface — one near the front edge, one near the rear edge.
 
-If the two measurements differ by more than 5%, perspective compression is significant:
-- perspective_correction_applied: true
-- Calculate a perspective_ratio = near_card_pixels_per_inch / far_card_pixels_per_inch
-- When measuring vinyl zones, interpolate pixels_per_inch linearly across the panel length based on each zone's position relative to the two card positions.
+Measure both cards independently:
+  near_card_pixels_per_inch = near_card_diameter_pixels ÷ 12
+  far_card_pixels_per_inch  = far_card_diameter_pixels  ÷ 12
 
-If the measurements are within 5% of each other, use the average as a single pixels_per_inch and set perspective_correction_applied: false.
+If they differ by more than 5%, interpolate pixels_per_inch across the panel based on each element's position (perspective correction). Otherwise use the average.
 
-If only one card is found, use it as the sole reference and set perspective_correction_applied: false.
+If only one card is visible, use it as the sole reference and set confidence to "medium".
 
-STEP 3 — VINYL DETECTION AND ZONE GROUPING
-Do NOT draw individual boxes around each letter, word, or small graphic element. Group related visual elements into logical PRODUCTION ZONES that reflect how a printer would produce and install the work:
+═══════════════════════════════════════════
+STEP 2 — CLASSIFY INTO THREE ARTBOARDS
+═══════════════════════════════════════════
 
-- TEXT CLUSTERS: All text appearing together as a unit gets ONE bounding box. Company name, phone number, address, and tagline printed together = one zone named e.g. "Company name and contact info"
-- LOGO + TEXT: A logo and any text directly associated with it as a branded unit = ONE zone named e.g. "Flame logo with company name"
-- STRIPES AND BANDS: A color stripe or band running along the vehicle = ONE wide rectangular zone spanning its full length, named e.g. "Blue lower body stripe"
-- REAR PANEL: All graphics on a rear door panel = ONE zone encompassing all content, named e.g. "Rear door graphics"
-- FULL WRAPS: A background color or printed image covering most of the panel = ONE zone for the entire wrap area
+ARTBOARD 1 — Cut Vinyl with Premask
+────────────────────────────────────
+ALL text of any size goes here: company names, phone numbers, websites, DOT numbers, unit numbers, license plate numbers.
+All logos and icons that can be cut in single or limited colors go here.
 
-Classify each zone as:
-- "printed_wrap" — large-format printed vinyl (full-color graphics, backgrounds, wraps, gradients)
-- "cut_vinyl" — individually cut vinyl letters, logos, or shapes (single color, no print)
-- "review" — ambiguous areas needing human confirmation
+GROUPING RULE: Items that appear together as a visual unit form ONE group. A logo + company name + stars = one group. Their internal spacing must be preserved. The group's bounding box captures the full visual unit including all internal whitespace between elements.
 
-Give each zone a short descriptive name (e.g. "Blue lower stripe", "Company logo block", "Rear door graphics").
+Items that will be installed ON TOP of a printed wrap STILL go on Artboard 1 — they become a second vinyl layer on the vehicle.
 
-STEP 4 — SQUARE FOOTAGE CALCULATION
-For each vinyl zone, measure pixel dimensions, convert to inches using the perspective-corrected pixels_per_inch for that zone's position, then add bleed:
-- Printed wrap: +1.5 inches per edge before calculating sq ft
-- Cut vinyl: +0.5 inches per edge before calculating sq ft
-Convert to square feet (sq in ÷ 144). Provide best-estimate sqft, conservative sqft_low, and generous sqft_high.
-Set paint_color_warning: true for any cut vinyl whose color is within one shade of the vehicle's base paint color.
+ARTBOARD 2 — Large Cut Panels
+───────────────────────────────
+Large solid-color shapes go here: body stripes, lower body panels, rocker panels, solid accent blocks.
+Single color only — no gradients, no photos, no blending.
+Each entry is a rectangle described by width × height.
 
-Also estimate a bounding box for each vinyl zone as percentages of the image dimensions (0.0 to 1.0), with (0,0) at the top-left corner of the image:
-- x_pct: left edge of the zone / image width
-- y_pct: top edge of the zone / image height
-- width_pct: zone width / image width
-- height_pct: zone height / image height
+ARTBOARD 3 — Printed Vinyl
+────────────────────────────
+Full-color printed rectangles go here: wraps, gradients, multi-color backgrounds, photos.
 
-Bounding box rules:
-- Extend each box to capture the FULL visual extent of the graphic including any gradient transitions or fade edges
-- For text zones, the box must encompass the entire text block — do not clip ascenders, descenders, or surrounding glow/shadow
-- When in doubt, draw a LARGER bounding box rather than a smaller one
+Calculate the FULL PANEL rectangle — do NOT subtract where Artboard 1 items will sit on top. That vinyl beneath is still full material cost.
 
-CRITICAL PRODUCTION RULE — BOUNDING BOXES MUST INCLUDE ALL INTERNAL WHITESPACE:
+Printed in 52"-wide vertical strips running the LENGTH of the panel:
+  strips_needed = ceil(panel_width_in ÷ 52)
+  sqft_per_strip = 52 × panel_height_in ÷ 144
+  total_sqft = strips_needed × sqft_per_strip
 
-In vinyl production, the printer outputs the ENTIRE rectangular bounding box of a graphic — including all internal white space, gaps between letters, and negative space within the design. The installer then weeds (removes) unwanted material. The COST and MATERIAL USAGE is based on the full rectangle, not just the colored/printed area.
+CLASSIFICATION QUICK REFERENCE:
+  Text of any size → Artboard 1
+  Logo/icon (cuttable, limited colors) → Artboard 1
+  Keep grouped items together on Artboard 1
+  Large solid color shape > ~10 sq ft → Artboard 2
+  Gradients / photos / multi-color → Artboard 3
+  Full wrap panel → Artboard 3 (full rectangle)
+  Rear door wrap (dark background + content) → Artboard 3 (full rectangle) + text/logos on Artboard 1
 
-Therefore, bounding boxes MUST be drawn to the OUTER EXTENT of each graphic zone including all internal white space.
+═══════════════════════════════════════════
+STEP 3 — MEASURE DIMENSIONS (in inches)
+═══════════════════════════════════════════
+Artboard 1 groups: measure the tight bounding box around the FULL GROUP including internal whitespace between elements.
+Artboard 2 panels: measure the complete solid-color rectangle.
+Artboard 3 panels: measure the full vehicle panel width and height.
 
-STEP 5 — PRODUCE JSON OUTPUT
+═══════════════════════════════════════════
+STEP 4 — CALCULATE SQUARE FOOTAGE
+═══════════════════════════════════════════
+
+ARTBOARD 1:
+  Nest all groups efficiently within the 52" width.
+  Groups can be rotated 90° to better fit.
+  artboard_height_in = total nested height of all groups (with minimal spacing).
+  sqft = 52 × artboard_height_in ÷ 144
+
+ARTBOARD 2:
+  sqft per panel entry = (width_in × height_in × quantity) ÷ 144
+  total_sqft = sum of all panel sqft entries
+
+ARTBOARD 3:
+  strips_needed = ceil(panel_width_in ÷ 52)
+  sqft_per_strip = 52 × panel_height_in ÷ 144
+  total_sqft per panel = strips_needed × sqft_per_strip
+  total_sqft = sum of all panel total_sqft values
+
+grand_total_sqft = artboard1.sqft + artboard2.total_sqft + artboard3.total_sqft
+
+═══════════════════════════════════════════
+FEW-SHOT EXAMPLES
+═══════════════════════════════════════════
+
+EXAMPLE 1 — Impact Fire cargo van (cut vinyl + solid stripes, no printed wrap):
+  Artboard 1:
+    Group "IMPACT FIRE + flame logo + contact info" — items=["flame logo","IMPACT FIRE text","phone number"], width_in=18, height_in=3
+    Group "License and unit numbers" — items=["DOT number","unit number"], width_in=12, height_in=2
+    Nested in 52" wide artboard, total height ≈ 6" → sqft = 52×6÷144 = 2.2
+  Artboard 2:
+    Panel "Blue lower body stripe" — width_in=177, height_in=14, quantity=2, sqft=(177×14×2)÷144=34.4
+  Artboard 3: empty, total_sqft=0
+  grand_total_sqft = 36.6
+
+EXAMPLE 2 — Affordable Air Express full wrap:
+  Artboard 1:
+    Group "Unit 09 + phone + websites" — items=["unit 09","phone number","website URLs"], ~4 sq ft artboard
+  Artboard 2: empty, total_sqft=0
+  Artboard 3:
+    Panel "Driver Side" — panel_width_in=72, panel_height_in=222, strips_needed=ceil(72÷52)=2, sqft_per_strip=52×222÷144=80.2, total_sqft=160.4
+    Panel "Passenger Side" — same as driver side, total_sqft=160.4
+    Panel "Front" — panel_width_in=90, panel_height_in=60, strips_needed=2, sqft_per_strip=52×60÷144=21.7, total_sqft=43.3
+    Panel "Rear Doors" — panel_width_in=70, panel_height_in=72, strips_needed=2, sqft_per_strip=52×72÷144=26.0, total_sqft=52.0
+  grand_total_sqft ≈ 420
+
+EXAMPLE 3 — Five Star Home Services Sprinter (partial wrap + solid accents):
+  Artboard 1:
+    Group "House icon + FIVE STAR HOME SERVICES + five stars" — items=["house icon","FIVE STAR HOME SERVICES","5 stars"]
+    Group "Services list" — items=["HVAC","Plumbing","Electrical"]
+    Group "Website URL"
+    Group "Phone number"
+  Artboard 2:
+    Panel "Navy side accent block" — solid navy rectangle
+    Panel "Black lower rocker stripe"
+  Artboard 3:
+    Panel "Rear doors" — full printed rectangle (even though logo sits on top of it)
+
+═══════════════════════════════════════════
+STEP 5 — OUTPUT JSON
+═══════════════════════════════════════════
 Return ONLY valid JSON — no markdown fences, no explanation, no trailing text:
 
 {
   "vehicle_type": "cargo_van | box_truck | pickup_truck | sedan | suv | sprinter | other",
-  "paint_color": "<description of vehicle base paint color>",
-  "panels": [
-    {
-      "panel": "driver_side | passenger_side | front | rear",
-      "valid": true,
-      "fiducial_count": 2,
-      "near_card_pixels_per_inch": 0.0,
-      "far_card_pixels_per_inch": 0.0,
-      "perspective_correction_applied": false,
-      "coverage_type": "printed_wrap | cut_vinyl | mixed | none",
-      "vinyl_zones": [
-        {
-          "name": "<short descriptive zone name>",
-          "type": "printed_wrap | cut_vinyl | review",
-          "sqft": 0.0,
-          "sqft_low": 0.0,
-          "sqft_high": 0.0,
-          "cut_vinyl_color": "<color description if cut_vinyl, else null>",
-          "paint_color_warning": false,
-          "bbox": { "x_pct": 0.0, "y_pct": 0.0, "width_pct": 0.0, "height_pct": 0.0 }
-        }
-      ],
-      "panel_sqft": 0.0,
-      "panel_sqft_low": 0.0,
-      "panel_sqft_high": 0.0
-    }
-  ],
-  "totals": {
-    "printed_wrap_sqft": 0.0,
-    "cut_vinyl_sqft": 0.0,
-    "total_sqft": 0.0,
-    "total_low": 0.0,
-    "total_high": 0.0
+  "artboard1": {
+    "label": "Cut Vinyl with Premask",
+    "groups": [
+      {
+        "name": "<descriptive group name>",
+        "items": ["<element 1>", "<element 2>"],
+        "width_in": 0.0,
+        "height_in": 0.0,
+        "can_rotate": true
+      }
+    ],
+    "artboard_width_in": 52,
+    "artboard_height_in": 0.0,
+    "sqft": 0.0
   },
+  "artboard2": {
+    "label": "Large Cut Panels",
+    "panels": [
+      {
+        "name": "<descriptive name>",
+        "width_in": 0.0,
+        "height_in": 0.0,
+        "quantity": 1,
+        "sqft": 0.0
+      }
+    ],
+    "total_sqft": 0.0
+  },
+  "artboard3": {
+    "label": "Printed Vinyl",
+    "panels": [
+      {
+        "name": "<e.g. Driver Side, Rear Doors>",
+        "panel_width_in": 0.0,
+        "panel_height_in": 0.0,
+        "strips_needed": 1,
+        "sqft_per_strip": 0.0,
+        "total_sqft": 0.0
+      }
+    ],
+    "total_sqft": 0.0
+  },
+  "grand_total_sqft": 0.0,
   "confidence": "high | medium | low",
-  "confidence_note": "<explanation of confidence level and any caveats>",
-  "invalid_panels": ["<panel names that could not be measured>"]
+  "confidence_note": "<explanation of confidence level and any caveats>"
 }`;
 
 // ─── Types shared between request handler and background worker ───────────────
@@ -249,7 +322,12 @@ async function runEstimation(session: SessionRecord, uploads: UploadRecord[]) {
     return;
   }
 
-  const totals = estimate.totals as Record<string, number> | undefined;
+  const grandTotal = (estimate.grand_total_sqft as number) ?? null;
+  const artboardData = {
+    artboard1: (estimate.artboard1 as Artboard1Data) ?? null,
+    artboard2: (estimate.artboard2 as Artboard2Data) ?? null,
+    artboard3: (estimate.artboard3 as Artboard3Data) ?? null,
+  };
 
   // ── Save estimate to DB ───────────────────────────────────────────────────
   const { data: estimateRow, error: estimateError } = await supabase
@@ -257,10 +335,10 @@ async function runEstimation(session: SessionRecord, uploads: UploadRecord[]) {
     .insert({
       session_id:      session.id,
       vehicle_type:    (estimate.vehicle_type as string) ?? null,
-      panels:          estimate.panels ?? null,
-      total_sqft:      totals?.total_sqft ?? null,
-      sqft_low:        totals?.total_low  ?? null,
-      sqft_high:       totals?.total_high ?? null,
+      panels:          artboardData,
+      total_sqft:      grandTotal,
+      sqft_low:        null,
+      sqft_high:       null,
       confidence:      (estimate.confidence as string) ?? null,
       confidence_note: (estimate.confidence_note as string) ?? null,
       raw_response:    rawResponse,
@@ -300,11 +378,10 @@ async function runEstimation(session: SessionRecord, uploads: UploadRecord[]) {
     const vehicleDesc = session.vehicle_description ?? "";
     const subjectVehicle = vehicleDesc ? ` ${vehicleDesc}` : "";
     const sessionUrl = `https://wrapsnap.advertisingvehicles.com/ae/sessions/${session.id}`;
-    const totalSqft  = totals?.total_sqft;
-    const low        = totals?.total_low;
-    const high       = totals?.total_high;
-    const printedWrap = totals?.printed_wrap_sqft;
-    const cutVinyl   = totals?.cut_vinyl_sqft;
+    const totalSqft  = grandTotal;
+    const cutVinylSqft   = artboardData.artboard1?.sqft ?? null;
+    const largeCutSqft   = artboardData.artboard2?.total_sqft ?? null;
+    const printedSqft    = artboardData.artboard3?.total_sqft ?? null;
     const confidence = (estimate.confidence as string) ?? "—";
     const confidenceNote = (estimate.confidence_note as string | null) ?? null;
 
@@ -326,11 +403,11 @@ async function runEstimation(session: SessionRecord, uploads: UploadRecord[]) {
         vehicleType:   (estimate.vehicle_type as string) ?? null,
         sessionDate:   new Date().toISOString(),
         totalSqft:     totalSqft ?? null,
-        sqftLow:       low ?? null,
-        sqftHigh:      high ?? null,
         confidence:    confidence === "—" ? null : confidence,
         confidenceNote,
-        panels:        (estimate.panels ?? []) as PanelPDF[],
+        artboard1:     artboardData.artboard1,
+        artboard2:     artboardData.artboard2,
+        artboard3:     artboardData.artboard3,
         photosByPanel: Object.keys(photosByPanel).length > 0 ? photosByPanel : null,
       });
       console.log("Estimate[bg]: PDF generated", { bytes: pdfBuffer.length });
@@ -341,7 +418,9 @@ async function runEstimation(session: SessionRecord, uploads: UploadRecord[]) {
     }
 
     const hasMaterialBreakdown =
-      (printedWrap != null && printedWrap > 0) || (cutVinyl != null && cutVinyl > 0);
+      (cutVinylSqft != null && cutVinylSqft > 0) ||
+      (largeCutSqft != null && largeCutSqft > 0) ||
+      (printedSqft  != null && printedSqft  > 0);
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -375,7 +454,6 @@ async function runEstimation(session: SessionRecord, uploads: UploadRecord[]) {
                       <td style="width:50%;padding-right:12px;">
                         <p style="margin:0;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;">Total sq ft</p>
                         <p style="margin:4px 0 0;font-size:22px;font-weight:700;color:#007BBA;">${totalSqft != null ? totalSqft.toFixed(1) : "—"}</p>
-                        ${low != null && high != null ? `<p style="margin:2px 0 0;font-size:12px;color:#9ca3af;">Range: ${low.toFixed(1)} – ${high.toFixed(1)}</p>` : ""}
                       </td>
                       <td style="width:50%;padding-left:12px;">
                         <p style="margin:0;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;">Confidence</p>
@@ -388,10 +466,11 @@ async function runEstimation(session: SessionRecord, uploads: UploadRecord[]) {
               ${hasMaterialBreakdown ? `
               <tr>
                 <td style="padding:14px 20px;${confidenceNote ? "border-bottom:1px solid #e5e7eb;" : ""}">
-                  <p style="margin:0 0 10px;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;">Material breakdown</p>
+                  <p style="margin:0 0 10px;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;">Artboard breakdown</p>
                   <table width="100%" cellpadding="0" cellspacing="0">
-                    ${printedWrap != null && printedWrap > 0 ? `<tr><td style="padding:3px 0;font-size:13px;color:#374151;">Printed Wrap</td><td style="padding:3px 0;font-size:13px;color:#111827;text-align:right;font-weight:600;">${printedWrap.toFixed(1)} sq ft</td></tr>` : ""}
-                    ${cutVinyl != null && cutVinyl > 0 ? `<tr><td style="padding:3px 0;font-size:13px;color:#374151;">Cut Vinyl</td><td style="padding:3px 0;font-size:13px;color:#111827;text-align:right;font-weight:600;">${cutVinyl.toFixed(1)} sq ft</td></tr>` : ""}
+                    ${cutVinylSqft != null && cutVinylSqft > 0 ? `<tr><td style="padding:3px 0;font-size:13px;color:#374151;">Cut Vinyl with Premask</td><td style="padding:3px 0;font-size:13px;color:#111827;text-align:right;font-weight:600;">${cutVinylSqft.toFixed(1)} sq ft</td></tr>` : ""}
+                    ${largeCutSqft != null && largeCutSqft > 0 ? `<tr><td style="padding:3px 0;font-size:13px;color:#374151;">Large Cut Panels</td><td style="padding:3px 0;font-size:13px;color:#111827;text-align:right;font-weight:600;">${largeCutSqft.toFixed(1)} sq ft</td></tr>` : ""}
+                    ${printedSqft != null && printedSqft > 0 ? `<tr><td style="padding:3px 0;font-size:13px;color:#374151;">Printed Vinyl</td><td style="padding:3px 0;font-size:13px;color:#111827;text-align:right;font-weight:600;">${printedSqft.toFixed(1)} sq ft</td></tr>` : ""}
                   </table>
                 </td>
               </tr>` : ""}
