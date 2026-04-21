@@ -103,6 +103,22 @@ VERIFIED EXAMPLE:
   Five Star navy accent panels: 191.1" long × 29.4" tall = 39.02 sq ft (both sides combined).
   The starburst graphic is centered, but the navy panel runs the full 191.1" length of the cargo van side.
 
+SYMMETRIC SIDE PANEL RULE:
+When driver side and passenger side have identical Large Cut Panels (same graphic, same color, same dimensions), both panels are cut from ONE continuous sheet run — they share a single artboard entry.
+
+How to report:
+  - ONE artboard entry, NOT two entries each multiplied by 2
+  - Dimensions = panel_length × panel_height (one panel's footprint)
+  - Label: "<Color> Accent Panel — Driver + Passenger (cut from single artboard)"
+  - qty = 1
+  - sqft = panel_length × panel_height ÷ 144
+
+Why: AVI cuts both side panels from one continuous roll run. The single sheet measurement already accounts for both sides.
+
+VERIFIED EXAMPLE:
+  Five Star navy side panels: 191.1" × 29.4" = 39.02 sq ft — ONE entry covering both sides.
+  NOT: 191" × 29" × qty 2 = 78 sq ft ✗
+
 ARTBOARD 3 — Printed Vinyl (full wraps only)
 ─────────────────────────────────────────────
 Large-format full-coverage panels: full vehicle wraps, full rear door wraps, full hood wraps. These require printing multiple 52"-wide strips and installing them with overlap across a large surface.
