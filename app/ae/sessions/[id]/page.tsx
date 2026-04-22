@@ -71,20 +71,22 @@ export default async function SessionDetailPage({
 
   const supabase = getSupabaseClient();
 
-  const { data: session, error } = await supabase
-    .from("sessions")
-    .select("id, token, client_name, client_phone, vehicle_description, status, created_at, created_by")
-    .eq("id", id)
-    .single();
+  const [{ data: session, error }, { data: adminRow }] = await Promise.all([
+    supabase
+      .from("sessions")
+      .select("id, token, client_name, client_phone, vehicle_description, status, created_at, created_by")
+      .eq("id", id)
+      .single(),
+    supabase
+      .from("admin_users")
+      .select("email")
+      .eq("email", userEmail)
+      .maybeSingle(),
+  ]);
 
-  if (error || !session || session.created_by !== userEmail) notFound();
-
-  const { data: adminRow } = await supabase
-    .from("admin_users")
-    .select("email")
-    .eq("email", userEmail)
-    .maybeSingle();
   const isAdmin = !!adminRow;
+  const isOwner = session?.created_by === userEmail;
+  if (error || !session || (!isOwner && !isAdmin)) notFound();
 
   const { data: uploads, error: uploadsError } = await supabase
     .from("uploads")
